@@ -545,6 +545,55 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
   if (error) throw new Error(`Failed to update order status: ${error.message}`);
 }
 
+export interface UpdateOrderDetailsInput {
+  customer_name: string;
+  customer_phone: string;
+  delivery_address: string;
+  city_locality: string;
+  pin_code: string;
+  order_notes: string;
+  delivery_charge: number;
+  total_amount: number;
+  status: OrderStatus;
+}
+
+export async function updateOrderDetails(
+  orderId: string,
+  input: UpdateOrderDetailsInput
+): Promise<void> {
+  const payload = {
+    customer_name: input.customer_name.trim(),
+    customer_phone: input.customer_phone.trim(),
+    delivery_address: input.delivery_address.trim(),
+    city_locality: input.city_locality.trim(),
+    pin_code: input.pin_code.trim(),
+    order_notes: input.order_notes.trim(),
+    delivery_charge: Math.max(0, Number(input.delivery_charge) || 0),
+    total_amount: Math.max(0, Number(input.total_amount) || 0),
+    status: input.status,
+  };
+
+  if (!isSupabaseConfigured || !supabase) {
+    const orders = readLocal<Order[]>(STORAGE_KEYS.orders, INITIAL_ORDERS);
+    writeLocal(
+      STORAGE_KEYS.orders,
+      orders.map((o) =>
+        o.id === orderId
+          ? {
+              ...o,
+              ...payload,
+              updated_at: new Date().toISOString(),
+            }
+          : o
+      )
+    );
+    return;
+  }
+
+  const {error} = await supabase.from('orders').update(payload).eq('id', orderId);
+  if (error) throw new Error(`Failed to update order: ${error.message}`);
+}
+
 export async function placeCustomerOrder(
   customer: CheckoutFormData,
   cartItems: CartItem[],

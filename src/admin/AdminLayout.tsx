@@ -174,7 +174,12 @@ export const AdminLayout: React.FC = () => {
         {/* Active Section */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {activeSection === 'overview' && (
-            <AdminOverview orders={orders} ordersLoading={ordersLoading} onNavigate={setActiveSection} />
+            <AdminOverview
+              orders={orders}
+              ordersLoading={ordersLoading}
+              onNavigate={setActiveSection}
+              onRefreshOrders={loadOrders}
+            />
           )}
           {activeSection === 'products' && <AdminProducts />}
           {activeSection === 'inventory' && <AdminInventory />}
