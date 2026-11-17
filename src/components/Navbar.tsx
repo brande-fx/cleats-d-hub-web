@@ -3,6 +3,7 @@ import {Menu, ShoppingBag, X} from 'lucide-react';
 import {Link, useLocation} from 'react-router-dom';
 import {useCart} from '../hooks/useCart';
 import {useStoreData} from '../hooks/useStoreData';
+import {resolvePublicAssetUrl} from '../utils/formatters';
 
 export const Navbar: React.FC = () => {
   const {settings} = useStoreData();
@@ -40,10 +41,10 @@ export const Navbar: React.FC = () => {
         >
           {settings.store_logo_url ? (
             <img
-              src={settings.store_logo_url}
+              src={resolvePublicAssetUrl(settings.store_logo_url)}
               alt={settings.store_name}
               referrerPolicy="no-referrer"
-              className="h-7 w-7 object-contain rounded-sm"
+              className="h-9 w-9 object-cover rounded-full border border-[#3C4044]/20 shrink-0"
             />
           ) : null}
           <span>{settings.store_name}</span>

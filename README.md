@@ -1,4 +1,4 @@
-# Calcite Footwear — Online Shoe Store
+# Cleats D Hub — Online Shoe Store
 
 A lightweight, sporty, mobile-first online shoe store built with **React + Vite + TypeScript + Tailwind CSS**, backed by **Supabase (Free Plan)** and hosted for free on **GitHub Pages**.
 
@@ -76,7 +76,7 @@ Run these commands inside the project folder on your computer:
 ```bash
 git init
 git add .
-git commit -m "Initial Calcite Footwear online store"
+git commit -m "Initial Cleats D Hub online store"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/calcite-footwear-store.git
 git push -u origin main
@@ -160,7 +160,7 @@ The included workflow file `.github/workflows/deploy.yml` automatically:
 2. Under **Build and deployment** -> **Source**, choose **GitHub Actions**.
 
 ### 14. Deploy the Website
-Trigger a push (or run the workflow manually under the **Actions** tab -> **Deploy Calcite Footwear to GitHub Pages** -> **Run workflow**):
+Trigger a push (or run the workflow manually under the **Actions** tab -> **Deploy Cleats D Hub to GitHub Pages** -> **Run workflow**):
 
 ```bash
 git push origin main

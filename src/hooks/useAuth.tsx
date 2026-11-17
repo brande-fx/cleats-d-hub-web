@@ -117,11 +117,11 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
     [verifyAdminProfile]
   );
 
-  const enterPreviewAdmin = useCallback((email = 'admin@calcitefootwear.com') => {
+  const enterPreviewAdmin = useCallback((email = 'admin@cleatsdhub.com') => {
     if (isSupabaseConfigured) return;
     const previewProfile: AdminProfile = {
       user_id: 'preview-admin',
-      email: email.trim() || 'admin@calcitefootwear.com',
+      email: email.trim() || 'admin@cleatsdhub.com',
       full_name: 'Store Administrator (Preview)',
       role: 'super_admin',
       is_active: true,

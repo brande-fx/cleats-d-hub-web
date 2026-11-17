@@ -1,6 +1,6 @@
 -- =============================================================================
 -- 001_initial_schema.sql
--- Calcite Footwear — Relational Database Schema for Supabase (PostgreSQL)
+-- Cleats D Hub — Relational Database Schema for Supabase (PostgreSQL)
 -- =============================================================================
 
 create extension if not exists "pgcrypto";
@@ -98,12 +98,12 @@ create index if not exists idx_order_items_order on public.order_items(order_id)
 -- 6. Store Settings (Single-row configuration table)
 create table if not exists public.store_settings (
   id integer primary key default 1 check (id = 1),
-  store_name text not null default 'Calcite Footwear',
-  store_logo_url text default '',
+  store_name text not null default 'Cleats D Hub',
+  store_logo_url text default '/assets/aistudio/764661096_18022752785897591_8307935459680660719_n_a9cc3fb8.jpg',
   whatsapp_country_code text not null default '91',
-  whatsapp_number text not null default '9876543210',
-  contact_phone text not null default '+91 98765 43210',
-  store_email text not null default 'support@calcitefootwear.com',
+  whatsapp_number text not null default '6909367070',
+  contact_phone text not null default '+91 6909367070',
+  store_email text not null default 'support@cleatsdhub.com',
   store_address text not null default '42 Residency Road, Indiranagar, Bengaluru 560038',
   delivery_charge numeric(10, 2) not null default 99 check (delivery_charge >= 0),
   free_delivery_threshold numeric(10, 2) not null default 2999 check (free_delivery_threshold >= 0),

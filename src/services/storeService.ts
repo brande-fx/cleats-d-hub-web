@@ -16,10 +16,10 @@ import {isSupabaseConfigured, supabase} from './supabaseClient';
 import {buildWhatsAppOrderMessage, buildWhatsAppUrl} from './whatsappService';
 
 const STORAGE_KEYS = {
-  products: 'calcite_preview_products_v1',
-  categories: 'calcite_preview_categories_v1',
-  orders: 'calcite_preview_orders_v1',
-  settings: 'calcite_preview_settings_v1',
+  products: 'cleatsdhub_preview_products_v2',
+  categories: 'cleatsdhub_preview_categories_v2',
+  orders: 'cleatsdhub_preview_orders_v2',
+  settings: 'cleatsdhub_preview_settings_v4',
 };
 
 function readLocal<T>(key: string, fallback: T): T {

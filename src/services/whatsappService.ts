@@ -63,7 +63,10 @@ export function buildWhatsAppOrderMessage(payload: WhatsAppMessagePayload): stri
 export function buildWhatsAppUrl(settings: StoreSettings, message: string): string {
   const countryCode = sanitizePhoneDigits(settings.whatsapp_country_code || '91');
   const businessPhone = sanitizePhoneDigits(settings.whatsapp_number || '');
-  const fullNumber = `${countryCode}${businessPhone}`;
+  const fullNumber =
+    countryCode && businessPhone.startsWith(countryCode) && businessPhone.length > 10
+      ? businessPhone
+      : `${countryCode}${businessPhone}`;
   const encodedMessage = encodeURIComponent(message);
   return `https://wa.me/${fullNumber}?text=${encodedMessage}`;
 }

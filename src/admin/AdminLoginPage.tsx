@@ -68,7 +68,7 @@ export const AdminLoginPage: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={() => enterPreviewAdmin(email || 'admin@calcitefootwear.com')}
+                onClick={() => enterPreviewAdmin(email || 'admin@cleatsdhub.com')}
                 className="w-full py-2.5 px-4 min-h-[42px] bg-[#3C4044] hover:bg-[#1F2225] text-[#F7F6F5] text-xs font-semibold rounded-md transition-colors cursor-pointer"
               >
                 Open Admin Dashboard (Local Preview)

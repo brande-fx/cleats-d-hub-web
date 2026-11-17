@@ -145,7 +145,7 @@ export const AdminSettings: React.FC = () => {
                 required
                 value={form.whatsapp_number}
                 onChange={(e) => setForm({...form, whatsapp_number: e.target.value})}
-                placeholder="9876543210"
+                placeholder="6909367070"
                 className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm font-mono-num"
               />
             </div>

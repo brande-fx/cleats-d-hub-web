@@ -1,6 +1,6 @@
 -- =============================================================================
 -- 003_seed_data.sql
--- Starter categories & default store settings for Calcite Footwear
+-- Starter categories & default store settings for Cleats D Hub
 -- =============================================================================
 
 insert into public.store_settings (
@@ -21,12 +21,12 @@ insert into public.store_settings (
   youtube_url
 ) values (
   1,
-  'Calcite Footwear',
-  '',
+  'Cleats D Hub',
+  '/assets/aistudio/764661096_18022752785897591_8307935459680660719_n_a9cc3fb8.jpg',
   '91',
-  '9876543210',
-  '+91 98765 43210',
-  'support@calcitefootwear.com',
+  '6909367070',
+  '+91 6909367070',
+  'support@cleatsdhub.com',
   '42 Residency Road, Indiranagar, Bengaluru 560038',
   99,
   2999,

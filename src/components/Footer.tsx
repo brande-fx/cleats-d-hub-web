@@ -2,6 +2,7 @@ import React from 'react';
 import {Link} from 'react-router-dom';
 import {useStoreData} from '../hooks/useStoreData';
 import {buildWhatsAppSupportUrl} from '../services/whatsappService';
+import {resolvePublicAssetUrl} from '../utils/formatters';
 
 export const Footer: React.FC = () => {
   const {settings, categories} = useStoreData();
@@ -13,7 +14,17 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-[#DDDCDB]/15">
           {/* Brand Summary */}
           <div className="space-y-3">
-            <p className="font-display text-lg font-bold text-[#F7F6F5]">{settings.store_name}</p>
+            <div className="flex items-center gap-3">
+              {settings.store_logo_url ? (
+                <img
+                  src={resolvePublicAssetUrl(settings.store_logo_url)}
+                  alt={settings.store_name}
+                  referrerPolicy="no-referrer"
+                  className="h-9 w-9 object-cover rounded-full border border-[#EDBF9B]/40 shrink-0"
+                />
+              ) : null}
+              <p className="font-display text-lg font-bold text-[#F7F6F5]">{settings.store_name}</p>
+            </div>
             <p className="text-sm text-[#DDDCDB]/80 leading-relaxed max-w-xs">
               Engineered athletic and everyday footwear with live size-level availability and direct WhatsApp ordering.
             </p>
@@ -79,9 +90,9 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Store & Admin */}
+          {/* Connect */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#EDBF9B]">Connect &amp; Store</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#EDBF9B]">Connect</h3>
             <ul className="space-y-2 text-sm">
               {settings.instagram_url && (
                 <li>
@@ -95,38 +106,6 @@ export const Footer: React.FC = () => {
                   </a>
                 </li>
               )}
-              {settings.facebook_url && (
-                <li>
-                  <a
-                    href={settings.facebook_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-[#FD7B41] transition-colors"
-                  >
-                    Facebook
-                  </a>
-                </li>
-              )}
-              {settings.youtube_url && (
-                <li>
-                  <a
-                    href={settings.youtube_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-[#FD7B41] transition-colors"
-                  >
-                    YouTube
-                  </a>
-                </li>
-              )}
-              <li className="pt-2">
-                <Link
-                  to="/admin"
-                  className="inline-block text-xs font-medium text-[#EDBF9B] hover:text-[#FD7B41] underline underline-offset-4"
-                >
-                  Store Admin Dashboard
-                </Link>
-              </li>
             </ul>
           </div>
         </div>

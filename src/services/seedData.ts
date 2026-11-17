@@ -3,12 +3,12 @@ import {Category, Order, Product, StoreSettings} from '../types';
 
 export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   id: 1,
-  store_name: 'Calcite Footwear',
-  store_logo_url: '',
+  store_name: 'Cleats D Hub',
+  store_logo_url: '/assets/aistudio/764661096_18022752785897591_8307935459680660719_n_a9cc3fb8.jpg',
   whatsapp_country_code: '91',
-  whatsapp_number: '9876543210',
-  contact_phone: '+91 98765 43210',
-  store_email: 'support@calcitefootwear.com',
+  whatsapp_number: '6909367070',
+  contact_phone: '+91 6909367070',
+  store_email: 'support@cleatsdhub.com',
   store_address: '42 Residency Road, Indiranagar, Bengaluru 560038',
   delivery_charge: 99,
   free_delivery_threshold: 2999,
@@ -254,7 +254,7 @@ export const INITIAL_ORDERS: Order[] = [
     total_amount: 4299,
     status: 'confirmed',
     whatsapp_initiated: true,
-    whatsapp_message: 'NEW ORDER — CALCITE FOOTWEAR\nOrder Ref: CF-261116-A81F2',
+    whatsapp_message: 'NEW ORDER — CLEATS D HUB\nOrder Ref: CF-261116-A81F2',
     created_at: '2026-11-16T11:20:00.000Z',
     items: [
       {
@@ -285,7 +285,7 @@ export const INITIAL_ORDERS: Order[] = [
     total_amount: 3499,
     status: 'pending',
     whatsapp_initiated: true,
-    whatsapp_message: 'NEW ORDER — CALCITE FOOTWEAR\nOrder Ref: CF-261117-C49K1',
+    whatsapp_message: 'NEW ORDER — CLEATS D HUB\nOrder Ref: CF-261117-C49K1',
     created_at: '2026-11-17T08:45:00.000Z',
     items: [
       {

@@ -1,12 +1,11 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {ArrowRight, Mail, MapPin, MessageCircle, Phone} from 'lucide-react';
 import {Link, useLocation} from 'react-router-dom';
-import {SEED_IMAGES} from '../assets/seedImages';
 import {ProductCard} from '../components/ProductCard';
 import {ResilientImage} from '../components/ResilientImage';
 import {useStoreData} from '../hooks/useStoreData';
 import {buildWhatsAppSupportUrl} from '../services/whatsappService';
-import {getTotalProductStock} from '../utils/formatters';
+import {getTotalProductStock, resolvePublicAssetUrl} from '../utils/formatters';
 
 type HomeCollectionTab = 'featured' | 'new' | 'bestsellers' | 'offers';
 
@@ -68,7 +67,7 @@ export const HomePage: React.FC = () => {
                 Performance Footwear · Direct WhatsApp Ordering
               </p>
               <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold text-[#1F2225] leading-[1.1] tracking-tight text-balance">
-                Precision grip for road, court, and trail.
+                Best Performance Cleats
               </h1>
               <p className="text-base text-[#3C4044]/85 leading-relaxed max-w-md">
                 Explore lightweight athletic silhouettes crafted with real-time UK size availability and effortless WhatsApp order confirmation.
@@ -94,8 +93,8 @@ export const HomePage: React.FC = () => {
 
           <div className="lg:col-span-7 relative min-h-[280px] sm:min-h-[360px] lg:min-h-[460px] bg-[#E8E7E5]">
             <ResilientImage
-              src={SEED_IMAGES.heroCampaign}
-              alt="Calcite Footwear flagship performance running shoe"
+              src={resolvePublicAssetUrl('/assets/aistudio/download_6a122e79.jpg')}
+              alt="Cleats D Hub flagship performance cleats"
               className="w-full h-full lg:h-full object-cover"
             />
           </div>
@@ -210,77 +209,46 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. Promotional Offer & Customer Support Band */}
+      {/* 4. Customer Support Band */}
       <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Seasonal Offer Callout */}
-          <div className="lg:col-span-7 bg-[#EDBF9B] border border-[#3C4044]/15 rounded-xl p-8 sm:p-10 flex flex-col justify-between gap-6">
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-[#3C4044]">
-                Seasonal Footwear Markdowns
-              </p>
-              <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#1F2225] text-balance">
-                Save up to 22% on select road, court, and trail pairs.
-              </h2>
-              <p className="text-sm text-[#1F2225]/85 max-w-lg leading-relaxed">
-                Every pair ships directly from our store inventory with live size verification and free delivery on orders above{' '}
-                <span className="font-mono-num font-semibold">
-                  ₹{settings.free_delivery_threshold.toLocaleString('en-IN')}
-                </span>
-                .
+        <div className="bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <h2 className="font-display text-xl font-bold text-[#1F2225]">Customer Support</h2>
+              <p className="text-sm text-[#3C4044]/80">
+                Need help choosing your UK size or checking dispatch timing? Reach our team directly.
               </p>
             </div>
-            <div>
-              <Link
-                to="/shop?offers=true"
-                className="inline-flex items-center gap-2 px-5 py-3 min-h-[44px] bg-[#3C4044] hover:bg-[#1F2225] text-[#F7F6F5] text-sm font-semibold rounded-md transition-colors"
-              >
-                <span>Shop Active Offers</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+
+            <div className="flex flex-wrap gap-x-8 gap-y-3 pt-1 text-sm text-[#3C4044]">
+              <div className="flex items-center gap-2.5">
+                <Phone className="w-4 h-4 text-[#FD7B41] shrink-0" />
+                <a href={`tel:${settings.contact_phone}`} className="hover:underline font-mono-num">
+                  {settings.contact_phone}
+                </a>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <Mail className="w-4 h-4 text-[#FD7B41] shrink-0" />
+                <a href={`mailto:${settings.store_email}`} className="hover:underline break-all">
+                  {settings.store_email}
+                </a>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <MapPin className="w-4 h-4 text-[#FD7B41] shrink-0" />
+                <span>{settings.store_address}</span>
+              </div>
             </div>
           </div>
 
-          {/* Customer Support Information */}
-          <div className="lg:col-span-5 bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl p-8 flex flex-col justify-between gap-6">
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <h2 className="font-display text-xl font-bold text-[#1F2225]">Customer Support</h2>
-                <p className="text-sm text-[#3C4044]/80">
-                  Need help choosing your UK size or checking dispatch timing? Reach our team directly.
-                </p>
-              </div>
-
-              <div className="space-y-3 pt-2 text-sm text-[#3C4044]">
-                <div className="flex items-start gap-3">
-                  <Phone className="w-4 h-4 mt-0.5 text-[#FD7B41] shrink-0" />
-                  <a href={`tel:${settings.contact_phone}`} className="hover:underline font-mono-num">
-                    {settings.contact_phone}
-                  </a>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Mail className="w-4 h-4 mt-0.5 text-[#FD7B41] shrink-0" />
-                  <a href={`mailto:${settings.store_email}`} className="hover:underline break-all">
-                    {settings.store_email}
-                  </a>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 mt-0.5 text-[#FD7B41] shrink-0" />
-                  <span>{settings.store_address}</span>
-                </div>
-              </div>
-            </div>
-
-            <a
-              href={supportWhatsAppUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 min-h-[44px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-sm font-semibold rounded-md transition-colors"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Chat on WhatsApp</span>
-            </a>
-          </div>
+          <a
+            href={supportWhatsAppUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 min-h-[44px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-sm font-semibold rounded-md transition-colors shrink-0 whitespace-nowrap"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Chat on WhatsApp</span>
+          </a>
         </div>
       </section>
     </div>
