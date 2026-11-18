@@ -636,6 +636,20 @@ export async function updateOrderDetails(
   if (error) throw new Error(`Failed to update order: ${error.message}`);
 }
 
+export async function deleteOrder(orderId: string): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    const orders = readLocal<Order[]>(STORAGE_KEYS.orders, INITIAL_ORDERS);
+    writeLocal(
+      STORAGE_KEYS.orders,
+      orders.filter((o) => o.id !== orderId)
+    );
+    return;
+  }
+
+  const {error} = await supabase.from('orders').delete().eq('id', orderId);
+  if (error) throw new Error(`Failed to delete order: ${error.message}`);
+}
+
 export async function placeCustomerOrder(
   customer: CheckoutFormData,
   cartItems: CartItem[],

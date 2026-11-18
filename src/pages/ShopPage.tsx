@@ -12,15 +12,34 @@ export const ShopPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialOffers = searchParams.get('offers') === 'true';
+  const initialBrand = searchParams.get('brand') || 'all';
 
   const [offersOnly, setOffersOnly] = useState(initialOffers);
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   useEffect(() => {
     setOffersOnly(searchParams.get('offers') === 'true');
+    setSelectedBrand(searchParams.get('brand') || 'all');
   }, [searchParams]);
+
+  const availableBrands = useMemo(() => {
+    const counts = new Map<string, {label: string; count: number}>();
+    for (const p of products) {
+      const trimmed = p.brand.trim();
+      if (!trimmed) continue;
+      const key = trimmed.toLowerCase();
+      const existing = counts.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        counts.set(key, {label: trimmed, count: 1});
+      }
+    }
+    return Array.from(counts.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [products]);
 
   const handleOffersToggle = (checked: boolean) => {
     setOffersOnly(checked);
@@ -33,18 +52,37 @@ export const ShopPage: React.FC = () => {
     setSearchParams(next, {replace: true});
   };
 
+  const handleBrandChange = (brand: string) => {
+    setSelectedBrand(brand);
+    const next = new URLSearchParams(searchParams);
+    if (brand && brand !== 'all') {
+      next.set('brand', brand);
+    } else {
+      next.delete('brand');
+    }
+    setSearchParams(next, {replace: true});
+  };
+
   const resetFilters = () => {
     setOffersOnly(false);
+    setSelectedBrand('all');
     setInStockOnly(false);
     setSearchQuery('');
     setSortBy('newest');
     setSearchParams({}, {replace: true});
   };
 
+  const hasActiveFilters =
+    selectedBrand !== 'all' || offersOnly || inStockOnly || searchQuery.trim().length > 0;
+
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
+    const activeBrand = selectedBrand.trim().toLowerCase();
 
     const matched = products.filter((product) => {
+      if (activeBrand !== 'all' && product.brand.trim().toLowerCase() !== activeBrand) {
+        return false;
+      }
       if (offersOnly && !product.is_special_offer && product.discount_percentage <= 0) {
         return false;
       }
@@ -73,7 +111,7 @@ export const ShopPage: React.FC = () => {
       }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [inStockOnly, offersOnly, products, searchQuery, sortBy]);
+  }, [inStockOnly, offersOnly, products, searchQuery, selectedBrand, sortBy]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -120,28 +158,77 @@ export const ShopPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Availability Checkboxes */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-5 text-sm text-[#3C4044]">
-          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={inStockOnly}
-              onChange={(e) => setInStockOnly(e.target.checked)}
-              className="w-4 h-4 accent-[#FD7B41] rounded-sm"
-            />
-            <span>Available pairs only</span>
-          </label>
+      {/* Brand & Availability Filters */}
+      <div className="space-y-4">
+        {availableBrands.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter products by brand">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#3C4044]/75 mr-1">
+              Brand
+            </span>
+            <button
+              type="button"
+              onClick={() => handleBrandChange('all')}
+              className={`px-3.5 py-1.5 min-h-[36px] text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                selectedBrand === 'all'
+                  ? 'bg-[#3C4044] text-[#F7F6F5]'
+                  : 'bg-[#F7F6F5] border border-[#3C4044]/20 text-[#3C4044] hover:border-[#3C4044]/45 hover:text-[#1F2225]'
+              }`}
+            >
+              All Brands ({products.length})
+            </button>
+            {availableBrands.map((brand) => {
+              const isSelected = selectedBrand.trim().toLowerCase() === brand.label.toLowerCase();
+              return (
+                <button
+                  key={brand.label}
+                  type="button"
+                  onClick={() => handleBrandChange(isSelected ? 'all' : brand.label)}
+                  className={`px-3.5 py-1.5 min-h-[36px] text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#3C4044] text-[#F7F6F5]'
+                      : 'bg-[#F7F6F5] border border-[#3C4044]/20 text-[#3C4044] hover:border-[#3C4044]/45 hover:text-[#1F2225]'
+                  }`}
+                >
+                  {brand.label} ({brand.count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={offersOnly}
-              onChange={(e) => handleOffersToggle(e.target.checked)}
-              className="w-4 h-4 accent-[#FD7B41] rounded-sm"
-            />
-            <span>Special offers only</span>
-          </label>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-5 text-sm text-[#3C4044]">
+            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={(e) => setInStockOnly(e.target.checked)}
+                className="w-4 h-4 accent-[#FD7B41] rounded-sm"
+              />
+              <span>Available pairs only</span>
+            </label>
+
+            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={offersOnly}
+                onChange={(e) => handleOffersToggle(e.target.checked)}
+                className="w-4 h-4 accent-[#FD7B41] rounded-sm"
+              />
+              <span>Special offers only</span>
+            </label>
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3C4044] hover:text-[#FD7B41] cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Clear Filters</span>
+            </button>
+          )}
         </div>
       </div>
 

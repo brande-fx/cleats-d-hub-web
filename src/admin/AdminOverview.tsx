@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
-import {AlertTriangle, ArrowRight, CheckCircle2, Clock, Edit3, Package, X} from 'lucide-react';
+import {AlertTriangle, ArrowRight, CheckCircle2, Clock, Edit3, Package, Trash2, X} from 'lucide-react';
 import {useStoreData} from '../hooks/useStoreData';
-import {updateOrderDetails, updateOrderStatus} from '../services/storeService';
+import {deleteOrder, updateOrderDetails, updateOrderStatus} from '../services/storeService';
 import {Order, OrderStatus} from '../types';
 import {
   formatCurrency,
@@ -47,6 +47,8 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
     status: 'pending' as OrderStatus,
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletingOrder, setDeletingOrder] = useState(false);
   const [orderNotice, setOrderNotice] = useState<{type: 'error' | 'success'; text: string} | null>(null);
 
   const totalProducts = allProducts.length;
@@ -102,6 +104,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
       delivery_charge: order.delivery_charge,
       status: order.status,
     });
+    setConfirmingDelete(false);
     setOrderNotice(null);
   };
 
@@ -137,6 +140,30 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
       });
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!editingOrder) return;
+    const orderNumber = editingOrder.order_number;
+    setDeletingOrder(true);
+    setOrderNotice(null);
+    try {
+      await deleteOrder(editingOrder.id);
+      await onRefreshOrders();
+      setOrderNotice({
+        type: 'success',
+        text: `Deleted order ${orderNumber}.`,
+      });
+      setConfirmingDelete(false);
+      setEditingOrder(null);
+    } catch (err) {
+      setOrderNotice({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to delete order.',
+      });
+    } finally {
+      setDeletingOrder(false);
     }
   };
 
@@ -477,21 +504,61 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#3C4044]/10">
-                <button
-                  type="button"
-                  onClick={() => setEditingOrder(null)}
-                  className="px-4 py-2 min-h-[40px] bg-[#E9E8E6] hover:bg-[#DDDCDB] text-[#3C4044] text-xs font-semibold rounded-md cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingEdit}
-                  className="px-5 py-2 min-h-[40px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-xs font-bold rounded-md cursor-pointer"
-                >
-                  {savingEdit ? 'Saving…' : 'Save Order Changes'}
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#3C4044]/10">
+                <div>
+                  {!confirmingDelete ? (
+                    <button
+                      type="button"
+                      disabled={savingEdit || deletingOrder}
+                      onClick={() => setConfirmingDelete(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[40px] bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-xs font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Order</span>
+                    </button>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-red-800">Delete permanently?</span>
+                      <button
+                        type="button"
+                        disabled={deletingOrder}
+                        onClick={() => void handleDeleteOrder()}
+                        className="px-3 py-2 min-h-[36px] bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-md cursor-pointer disabled:opacity-50"
+                      >
+                        {deletingOrder ? 'Deleting…' : 'Confirm Delete'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deletingOrder}
+                        onClick={() => setConfirmingDelete(false)}
+                        className="px-3 py-2 min-h-[36px] bg-[#E9E8E6] hover:bg-[#DDDCDB] text-[#3C4044] text-xs font-semibold rounded-md cursor-pointer"
+                      >
+                        Keep
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 ml-auto">
+                  <button
+                    type="button"
+                    disabled={savingEdit || deletingOrder}
+                    onClick={() => {
+                      setConfirmingDelete(false);
+                      setEditingOrder(null);
+                    }}
+                    className="px-4 py-2 min-h-[40px] bg-[#E9E8E6] hover:bg-[#DDDCDB] text-[#3C4044] text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEdit || deletingOrder}
+                    className="px-5 py-2 min-h-[40px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-xs font-bold rounded-md cursor-pointer disabled:opacity-50"
+                  >
+                    {savingEdit ? 'Saving…' : 'Save Order Changes'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

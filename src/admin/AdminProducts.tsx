@@ -62,6 +62,7 @@ function createEmptyDraft(): SaveProductInput {
 export const AdminProducts: React.FC = () => {
   const {allProducts, refreshStore} = useStoreData();
   const [search, setSearch] = useState('');
+  const [brandFilter, setBrandFilter] = useState('all');
   const [editorOpen, setEditorOpen] = useState(false);
   const [draft, setDraft] = useState<SaveProductInput>(() => createEmptyDraft());
   const [newSizeInput, setNewSizeInput] = useState('');
@@ -308,7 +309,19 @@ export const AdminProducts: React.FC = () => {
     }
   };
 
+  const availableBrands = Array.from(
+    new Map(
+      allProducts
+        .map((p) => p.brand.trim())
+        .filter(Boolean)
+        .map((b) => [b.toLowerCase(), b] as const)
+    ).values()
+  ).sort((a, b) => a.localeCompare(b));
+
   const filtered = allProducts.filter((p) => {
+    if (brandFilter !== 'all' && p.brand.trim().toLowerCase() !== brandFilter.toLowerCase()) {
+      return false;
+    }
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q);
@@ -348,16 +361,32 @@ export const AdminProducts: React.FC = () => {
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="relative max-w-sm">
-        <Search className="w-4 h-4 text-[#3C4044]/60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search cleats or boots by name or brand…"
-          className="w-full pl-9 pr-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225]"
-        />
+      {/* Search & Brand Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="relative max-w-sm w-full">
+          <Search className="w-4 h-4 text-[#3C4044]/60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search cleats or boots by name or brand…"
+            className="w-full pl-9 pr-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225]"
+          />
+        </div>
+
+        <select
+          value={brandFilter}
+          onChange={(e) => setBrandFilter(e.target.value)}
+          aria-label="Filter products by brand"
+          className="px-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225] sm:w-52"
+        >
+          <option value="all">All Brands ({allProducts.length})</option>
+          {availableBrands.map((brand) => (
+            <option key={brand} value={brand}>
+              {brand}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Products Table */}

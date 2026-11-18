@@ -12,6 +12,7 @@ type HomeCollectionTab = 'featured' | 'new' | 'bestsellers' | 'offers';
 export const HomePage: React.FC = () => {
   const {products, settings, loading} = useStoreData();
   const [activeTab, setActiveTab] = useState<HomeCollectionTab>('featured');
+  const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const location = useLocation();
 
   useEffect(() => {
@@ -23,19 +24,35 @@ export const HomePage: React.FC = () => {
     }
   }, [location.hash]);
 
-  const curatedProducts = useMemo(() => {
-    let list = products;
-    if (activeTab === 'featured') {
-      list = products.filter((p) => p.is_featured);
-    } else if (activeTab === 'new') {
-      list = products.filter((p) => p.is_new_arrival);
-    } else if (activeTab === 'bestsellers') {
-      list = products.filter((p) => p.is_best_seller);
-    } else if (activeTab === 'offers') {
-      list = products.filter((p) => p.is_special_offer || p.discount_percentage > 0);
+  const availableBrands = useMemo(() => {
+    const unique = new Map<string, string>();
+    for (const p of products) {
+      const trimmed = p.brand.trim();
+      if (trimmed && !unique.has(trimmed.toLowerCase())) {
+        unique.set(trimmed.toLowerCase(), trimmed);
+      }
     }
-    return (list.length > 0 ? list : products).slice(0, 6);
-  }, [activeTab, products]);
+    return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
+  const curatedProducts = useMemo(() => {
+    const brandFiltered =
+      selectedBrand === 'all'
+        ? products
+        : products.filter((p) => p.brand.trim().toLowerCase() === selectedBrand.trim().toLowerCase());
+
+    let list = brandFiltered;
+    if (activeTab === 'featured') {
+      list = brandFiltered.filter((p) => p.is_featured);
+    } else if (activeTab === 'new') {
+      list = brandFiltered.filter((p) => p.is_new_arrival);
+    } else if (activeTab === 'bestsellers') {
+      list = brandFiltered.filter((p) => p.is_best_seller);
+    } else if (activeTab === 'offers') {
+      list = brandFiltered.filter((p) => p.is_special_offer || p.discount_percentage > 0);
+    }
+    return (list.length > 0 ? list : brandFiltered).slice(0, 6);
+  }, [activeTab, products, selectedBrand]);
 
   const supportWhatsAppUrl = buildWhatsAppSupportUrl(settings);
 
@@ -103,21 +120,39 @@ export const HomePage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E9E8E6] border border-[#3C4044]/10 rounded-lg self-start md:self-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-3.5 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer ${
-                  activeTab === tab.key
-                    ? 'bg-[#3C4044] text-[#F7F6F5]'
-                    : 'text-[#3C4044] hover:text-[#1F2225]'
-                }`}
+          <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
+            {availableBrands.length > 0 && (
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                aria-label="Filter showcase by brand"
+                className="px-3 py-2 min-h-[38px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-lg text-xs font-semibold text-[#3C4044] focus:outline-2 focus:outline-[#FD7B41] cursor-pointer"
               >
-                {tab.label}
-              </button>
-            ))}
+                <option value="all">All Brands</option>
+                {availableBrands.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <div className="flex flex-wrap items-center gap-1 p-1 bg-[#E9E8E6] border border-[#3C4044]/10 rounded-lg">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-3.5 py-2 text-xs font-semibold rounded-md transition-colors whitespace-nowrap cursor-pointer ${
+                    activeTab === tab.key
+                      ? 'bg-[#3C4044] text-[#F7F6F5]'
+                      : 'text-[#3C4044] hover:text-[#1F2225]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -140,10 +175,14 @@ export const HomePage: React.FC = () => {
 
         <div className="pt-8 flex justify-center">
           <Link
-            to="/shop"
+            to={selectedBrand === 'all' ? '/shop' : `/shop?brand=${encodeURIComponent(selectedBrand)}`}
             className="inline-flex items-center gap-2 px-6 py-3 min-h-[44px] bg-[#3C4044] hover:bg-[#1F2225] text-[#F7F6F5] text-sm font-semibold rounded-md transition-colors"
           >
-            <span>Explore Full Cleats Lineup ({products.length} Pairs)</span>
+            <span>
+              {selectedBrand === 'all'
+                ? `Explore Full Cleats Lineup (${products.length} Pairs)`
+                : `View All ${selectedBrand} Cleats`}
+            </span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
