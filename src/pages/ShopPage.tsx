@@ -8,33 +8,19 @@ import {getEffectivePrice, getTotalProductStock} from '../utils/formatters';
 type SortOption = 'newest' | 'price-asc' | 'price-desc' | 'discount';
 
 export const ShopPage: React.FC = () => {
-  const {products, categories, loading} = useStoreData();
+  const {products, loading} = useStoreData();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initialCategory = searchParams.get('category') || 'all';
   const initialOffers = searchParams.get('offers') === 'true';
 
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [offersOnly, setOffersOnly] = useState(initialOffers);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   useEffect(() => {
-    setSelectedCategory(searchParams.get('category') || 'all');
     setOffersOnly(searchParams.get('offers') === 'true');
   }, [searchParams]);
-
-  const handleCategoryChange = (slug: string) => {
-    setSelectedCategory(slug);
-    const next = new URLSearchParams(searchParams);
-    if (slug === 'all') {
-      next.delete('category');
-    } else {
-      next.set('category', slug);
-    }
-    setSearchParams(next, {replace: true});
-  };
 
   const handleOffersToggle = (checked: boolean) => {
     setOffersOnly(checked);
@@ -48,7 +34,6 @@ export const ShopPage: React.FC = () => {
   };
 
   const resetFilters = () => {
-    setSelectedCategory('all');
     setOffersOnly(false);
     setInStockOnly(false);
     setSearchQuery('');
@@ -60,9 +45,6 @@ export const ShopPage: React.FC = () => {
     const q = searchQuery.trim().toLowerCase();
 
     const matched = products.filter((product) => {
-      if (selectedCategory !== 'all' && product.category_slug !== selectedCategory) {
-        return false;
-      }
       if (offersOnly && !product.is_special_offer && product.discount_percentage <= 0) {
         return false;
       }
@@ -73,7 +55,7 @@ export const ShopPage: React.FC = () => {
         const matchesText =
           product.name.toLowerCase().includes(q) ||
           product.brand.toLowerCase().includes(q) ||
-          (product.category_name || '').toLowerCase().includes(q);
+          product.description.toLowerCase().includes(q);
         if (!matchesText) return false;
       }
       return true;
@@ -91,7 +73,7 @@ export const ShopPage: React.FC = () => {
       }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [inStockOnly, offersOnly, products, searchQuery, selectedCategory, sortBy]);
+  }, [inStockOnly, offersOnly, products, searchQuery, sortBy]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -99,11 +81,11 @@ export const ShopPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#3C4044]/15 pb-6">
         <div className="space-y-1">
           <h1 className="font-display text-3xl font-extrabold text-[#1F2225]">
-            {offersOnly ? 'Special Footwear Offers' : 'Footwear Catalogue'}
+            {offersOnly ? 'Special Cleat Offers' : 'Football Boots & Cleats'}
           </h1>
           <p className="text-sm text-[#3C4044]/80">
             Showing <span className="font-mono-num font-semibold text-[#1F2225]">{filteredProducts.length}</span> of{' '}
-            <span className="font-mono-num">{products.length}</span> active models
+            <span className="font-mono-num">{products.length}</span> active pairs
           </p>
         </div>
 
@@ -115,8 +97,8 @@ export const ShopPage: React.FC = () => {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search shoe or brand…"
-              aria-label="Search products by name or brand"
+              placeholder="Search cleat, boot, or brand…"
+              aria-label="Search football boots by name or brand"
               className="w-full pl-9 pr-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225] placeholder:text-[#3C4044]/55 focus:outline-2 focus:outline-[#FD7B41]"
             />
           </div>
@@ -126,7 +108,7 @@ export const ShopPage: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              aria-label="Sort products"
+              aria-label="Sort football boots"
               className="px-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225] focus:outline-2 focus:outline-[#FD7B41]"
             >
               <option value="newest">Sort: Newest</option>
@@ -138,36 +120,8 @@ export const ShopPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Filter Tabs & Availability Checkboxes */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleCategoryChange('all')}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap ${
-              selectedCategory === 'all'
-                ? 'bg-[#3C4044] text-[#F7F6F5]'
-                : 'bg-[#F7F6F5] text-[#3C4044] border border-[#3C4044]/15 hover:border-[#3C4044]/40'
-            }`}
-          >
-            All Categories
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => handleCategoryChange(cat.slug)}
-              className={`px-3.5 py-2 text-xs font-semibold rounded-md transition-colors cursor-pointer whitespace-nowrap ${
-                selectedCategory === cat.slug
-                  ? 'bg-[#3C4044] text-[#F7F6F5]'
-                  : 'bg-[#F7F6F5] text-[#3C4044] border border-[#3C4044]/15 hover:border-[#3C4044]/40'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-
+      {/* Availability Checkboxes */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-5 text-sm text-[#3C4044]">
           <label className="inline-flex items-center gap-2 cursor-pointer select-none">
             <input
@@ -176,7 +130,7 @@ export const ShopPage: React.FC = () => {
               onChange={(e) => setInStockOnly(e.target.checked)}
               className="w-4 h-4 accent-[#FD7B41] rounded-sm"
             />
-            <span>Available products only</span>
+            <span>Available pairs only</span>
           </label>
 
           <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -200,9 +154,9 @@ export const ShopPage: React.FC = () => {
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl p-12 text-center space-y-4">
-          <p className="font-display text-lg font-bold text-[#1F2225]">No shoes match your current filters</p>
+          <p className="font-display text-lg font-bold text-[#1F2225]">No football boots match your current filters</p>
           <p className="text-sm text-[#3C4044]/80 max-w-md mx-auto">
-            Try clearing your search term or switching back to all categories.
+            Try clearing your search term or resetting your filters.
           </p>
           <button
             type="button"

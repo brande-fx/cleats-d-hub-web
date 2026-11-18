@@ -5,7 +5,7 @@ import {buildWhatsAppSupportUrl} from '../services/whatsappService';
 import {resolvePublicAssetUrl} from '../utils/formatters';
 
 export const Footer: React.FC = () => {
-  const {settings, categories} = useStoreData();
+  const {settings} = useStoreData();
   const supportUrl = buildWhatsAppSupportUrl(settings);
 
   return (
@@ -26,18 +26,18 @@ export const Footer: React.FC = () => {
               <p className="font-display text-lg font-bold text-[#F7F6F5]">{settings.store_name}</p>
             </div>
             <p className="text-sm text-[#DDDCDB]/80 leading-relaxed max-w-xs">
-              Engineered athletic and everyday footwear with live size-level availability and direct WhatsApp ordering.
+              Dedicated football store for matchday cleats, firm-ground boots, and turf shoes with live UK size availability and direct WhatsApp ordering.
             </p>
             <p className="text-xs text-[#EDBF9B]">{settings.store_address}</p>
           </div>
 
           {/* Shop Links */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#EDBF9B]">Footwear</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#EDBF9B]">Football Store</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/shop" className="hover:text-[#FD7B41] transition-colors">
-                  All Shoes
+                  All Cleats &amp; Boots
                 </Link>
               </li>
               <li>
@@ -45,16 +45,16 @@ export const Footer: React.FC = () => {
                   Special Offers
                 </Link>
               </li>
-              {categories.slice(0, 4).map((cat) => (
-                <li key={cat.id}>
-                  <Link
-                    to={`/shop?category=${cat.slug}`}
-                    className="hover:text-[#FD7B41] transition-colors"
-                  >
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link to="/checkout" className="hover:text-[#FD7B41] transition-colors">
+                  Cart &amp; Checkout
+                </Link>
+              </li>
+              <li>
+                <Link to="/#contact" className="hover:text-[#FD7B41] transition-colors">
+                  Contact &amp; Sizing Help
+                </Link>
+              </li>
             </ul>
           </div>
 

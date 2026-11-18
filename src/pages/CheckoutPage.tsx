@@ -177,13 +177,13 @@ export const CheckoutPage: React.FC = () => {
       <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-4">
         <h1 className="font-display text-2xl font-bold text-[#1F2225]">Your shopping cart is empty</h1>
         <p className="text-sm text-[#3C4044]/80">
-          Add shoes to your cart before proceeding to WhatsApp checkout.
+          Add football boots or cleats to your cart before proceeding to WhatsApp checkout.
         </p>
         <Link
           to="/shop"
           className="inline-flex items-center gap-2 px-5 py-3 bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] font-semibold text-sm rounded-md"
         >
-          Browse Footwear
+          Browse Cleats &amp; Boots
         </Link>
       </div>
     );

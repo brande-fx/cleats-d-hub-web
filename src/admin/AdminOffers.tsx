@@ -152,7 +152,7 @@ export const AdminOffers: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-[#E9E8E6] text-[#3C4044]">
               <tr>
-                <th className="px-4 py-3 font-semibold">Shoe</th>
+                <th className="px-4 py-3 font-semibold">Cleat / Boot</th>
                 <th className="px-4 py-3 font-semibold text-right">Regular Price</th>
                 <th className="px-4 py-3 font-semibold">Sale Price (₹)</th>
                 <th className="px-4 py-3 font-semibold">Offer Label</th>

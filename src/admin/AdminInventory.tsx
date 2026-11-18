@@ -61,7 +61,7 @@ export const AdminInventory: React.FC = () => {
       <div>
         <h2 className="font-display text-2xl font-extrabold text-[#1F2225]">Size &amp; Stock Inventory</h2>
         <p className="text-sm text-[#3C4044]/80">
-          Manage individual UK shoe sizes, stock quantities, and out-of-stock flags per model.
+          Manage individual UK boot sizes, stock quantities, and out-of-stock flags per cleat model.
         </p>
       </div>
 
@@ -81,7 +81,7 @@ export const AdminInventory: React.FC = () => {
         {/* Left: Product Picker */}
         <div className="lg:col-span-4 bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl overflow-hidden">
           <div className="px-4 py-3 bg-[#E9E8E6] border-b border-[#3C4044]/10 text-xs font-semibold text-[#3C4044]">
-            Select Footwear Model ({allProducts.length})
+            Select Cleat / Boot ({allProducts.length})
           </div>
           <div className="divide-y divide-[#3C4044]/10 max-h-[520px] overflow-y-auto">
             {allProducts.map((product) => {

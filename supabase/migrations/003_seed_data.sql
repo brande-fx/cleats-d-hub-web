@@ -30,7 +30,7 @@ insert into public.store_settings (
   '42 Residency Road, Indiranagar, Bengaluru 560038',
   99,
   2999,
-  'Free delivery on orders above ₹2,999 · Instant WhatsApp Express Checkout',
+  'Free delivery on football boots above ₹2,999 · Instant WhatsApp Express Checkout',
   true,
   'https://instagram.com',
   'https://facebook.com',
@@ -39,9 +39,9 @@ insert into public.store_settings (
 on conflict (id) do nothing;
 
 insert into public.categories (name, slug, description, display_order) values
-  ('Running', 'running', 'Carbon-plated race shoes and daily road trainers.', 1),
-  ('Training', 'training', 'Flat-base gym stability and HIIT footwear.', 2),
-  ('Trail', 'trail', 'High-traction lugged shoes built for rugged terrain.', 3),
-  ('Court', 'court', 'Responsive indoor & hardwood court sneakers.', 4),
-  ('Lifestyle', 'lifestyle', 'Minimalist everyday athletic silhouettes.', 5)
+  ('Firm Ground (FG)', 'firm-ground', 'Molded-stud football cleats engineered for natural grass pitches.', 1),
+  ('Turf (TF)', 'turf', 'Multi-stud rubber outsole football boots built for artificial turf and 5-a-side.', 2),
+  ('Artificial Grass (AG)', 'artificial-grass', 'Conical-stud cleats engineered for durability and traction on 3G/4G grass.', 3),
+  ('Futsal (IC)', 'futsal', 'Low-profile non-marking gum soles for indoor courts and street football.', 4),
+  ('Soft Ground (SG)', 'soft-ground', 'Hybrid screw-in stud football boots for wet and muddy grass pitches.', 5)
 on conflict (slug) do nothing;

@@ -83,7 +83,7 @@ export const CartDrawer: React.FC = () => {
               <div className="space-y-1">
                 <p className="font-display text-base font-semibold text-[#1F2225]">Your cart is empty</p>
                 <p className="text-sm text-[#3C4044]/75 max-w-xs">
-                  Select a shoe size on any product to add it to your bag.
+                  Select a UK boot size on any pair to add it to your bag.
                 </p>
               </div>
               <Link
@@ -91,7 +91,7 @@ export const CartDrawer: React.FC = () => {
                 onClick={closeCart}
                 className="px-5 py-2.5 bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-sm font-semibold rounded-md transition-colors"
               >
-                Browse Footwear
+                Browse Cleats &amp; Boots
               </Link>
             </div>
           ) : (

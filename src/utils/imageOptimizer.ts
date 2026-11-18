@@ -45,6 +45,14 @@ export async function optimizeProductImage(
         ctx.drawImage(img, 0, 0, width, height);
 
         const targetMime = 'image/webp';
+        const base =
+          file.name
+            .replace(/\.[^.]+$/, '')
+            .replace(/[^a-zA-Z0-9_-]/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '') || 'shoe';
+        const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
         canvas.toBlob(
           (blob) => {
             if (!blob) {
@@ -55,10 +63,9 @@ export async function optimizeProductImage(
                     reject(new Error('Image compression failed.'));
                     return;
                   }
-                  const base = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-');
                   resolve({
                     blob: jpegBlob,
-                    fileName: `${base}-${Date.now()}.jpg`,
+                    fileName: `${base}-${uniqueSuffix}.jpg`,
                     mimeType: 'image/jpeg',
                   });
                 },
@@ -67,10 +74,9 @@ export async function optimizeProductImage(
               );
               return;
             }
-            const base = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '-');
             resolve({
               blob,
-              fileName: `${base}-${Date.now()}.webp`,
+              fileName: `${base}-${uniqueSuffix}.webp`,
               mimeType: targetMime,
             });
           },

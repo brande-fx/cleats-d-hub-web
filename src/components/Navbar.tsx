@@ -14,7 +14,6 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     {label: 'Home', to: '/'},
     {label: 'Shop', to: '/shop'},
-    {label: 'Categories', to: '/#categories'},
     {label: 'Offers', to: '/shop?offers=true'},
     {label: 'Contact', to: '/#contact'},
   ];

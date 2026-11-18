@@ -16,9 +16,9 @@ import {isSupabaseConfigured, supabase} from './supabaseClient';
 import {buildWhatsAppOrderMessage, buildWhatsAppUrl} from './whatsappService';
 
 const STORAGE_KEYS = {
-  products: 'cleatsdhub_preview_products_v2',
-  categories: 'cleatsdhub_preview_categories_v2',
-  orders: 'cleatsdhub_preview_orders_v2',
+  products: 'cleatsdhub_preview_products_v3',
+  categories: 'cleatsdhub_preview_categories_v3',
+  orders: 'cleatsdhub_preview_orders_v3',
   settings: 'cleatsdhub_preview_settings_v4',
 };
 
@@ -190,14 +190,22 @@ export async function fetchProducts(includeInactive = false): Promise<Product[]>
   return (data || []).map((row: Record<string, unknown>) => {
     const cat = row.categories as {id: string; name: string; slug: string} | null;
     const rawSizes = (row.product_sizes as ProductSize[] | null) || [];
+    const primaryUrl = typeof row.image_url === 'string' ? row.image_url.trim() : '';
+    const rawGallery = Array.isArray(row.gallery_urls)
+      ? (row.gallery_urls as string[]).map((u) => (typeof u === 'string' ? u.trim() : '')).filter(Boolean)
+      : [];
+    const normalizedGallery = Array.from(
+      new Set(primaryUrl ? [primaryUrl, ...rawGallery] : rawGallery)
+    );
     return {
       ...(row as unknown as Product),
       regular_price: Number(row.regular_price),
       discounted_price: row.discounted_price !== null ? Number(row.discounted_price) : null,
       discount_percentage: Number(row.discount_percentage ?? 0),
-      category_name: cat?.name || 'Footwear',
+      category_name: cat?.name || 'Football Cleats',
       category_slug: cat?.slug || '',
-      gallery_urls: Array.isArray(row.gallery_urls) ? (row.gallery_urls as string[]) : [],
+      image_url: normalizedGallery[0] || primaryUrl,
+      gallery_urls: normalizedGallery,
       sizes: [...rawSizes].sort((a, b) => a.sort_order - b.sort_order),
     };
   });
@@ -245,6 +253,14 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
       sort_order: s.sort_order ?? index + 1,
     }));
 
+  const normalizedGallery = Array.from(
+    new Set((input.gallery_urls || []).map((u) => u.trim()).filter(Boolean))
+  );
+  const primaryImage = input.image_url.trim() || normalizedGallery[0] || '';
+  const finalGallery = primaryImage
+    ? [primaryImage, ...normalizedGallery.filter((u) => u !== primaryImage)]
+    : normalizedGallery;
+
   if (!isSupabaseConfigured || !supabase) {
     const products = readLocal<Product[]>(STORAGE_KEYS.products, INITIAL_PRODUCTS);
     const categories = readLocal<Category[]>(STORAGE_KEYS.categories, INITIAL_CATEGORIES);
@@ -267,14 +283,14 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
           name: input.name.trim(),
           brand: input.brand.trim(),
           category_id: input.category_id,
-          category_name: cat?.name || 'Footwear',
+          category_name: cat?.name || 'Football Cleats',
           category_slug: cat?.slug || '',
           description: input.description.trim(),
           regular_price: regularPrice,
           discounted_price: discountedPrice,
           discount_percentage: discountPercentage,
-          image_url: input.image_url,
-          gallery_urls: input.gallery_urls?.length ? input.gallery_urls : [input.image_url],
+          image_url: primaryImage,
+          gallery_urls: finalGallery,
           is_active: input.is_active,
           is_featured: input.is_featured,
           is_new_arrival: input.is_new_arrival,
@@ -297,14 +313,14 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
       slug: uniqueSlug,
       brand: input.brand.trim(),
       category_id: input.category_id,
-      category_name: cat?.name || 'Footwear',
+      category_name: cat?.name || 'Football Cleats',
       category_slug: cat?.slug || '',
       description: input.description.trim(),
       regular_price: regularPrice,
       discounted_price: discountedPrice,
       discount_percentage: discountPercentage,
-      image_url: input.image_url,
-      gallery_urls: input.gallery_urls?.length ? input.gallery_urls : [input.image_url],
+      image_url: primaryImage,
+      gallery_urls: finalGallery,
       is_active: input.is_active,
       is_featured: input.is_featured,
       is_new_arrival: input.is_new_arrival,
@@ -335,8 +351,8 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
     regular_price: regularPrice,
     discounted_price: discountedPrice,
     discount_percentage: discountPercentage,
-    image_url: input.image_url,
-    gallery_urls: input.gallery_urls?.length ? input.gallery_urls : input.image_url ? [input.image_url] : [],
+    image_url: primaryImage,
+    gallery_urls: finalGallery,
     is_active: input.is_active,
     is_featured: input.is_featured,
     is_new_arrival: input.is_new_arrival,
@@ -491,6 +507,32 @@ export async function uploadProductImage(file: File): Promise<string> {
 
   const {data} = supabase.storage.from('product-images').getPublicUrl(filePath);
   return data.publicUrl;
+}
+
+export async function uploadProductImages(
+  files: File[],
+  onProgress?: (completed: number, total: number) => void
+): Promise<{urls: string[]; failed: Array<{name: string; reason: string}>}> {
+  const urls: string[] = [];
+  const failed: Array<{name: string; reason: string}> = [];
+  const total = files.length;
+
+  for (let i = 0; i < files.length; i += 1) {
+    const file = files[i];
+    try {
+      const publicUrl = await uploadProductImage(file);
+      urls.push(publicUrl);
+    } catch (err) {
+      failed.push({
+        name: file.name,
+        reason: err instanceof Error ? err.message : 'Upload failed',
+      });
+    } finally {
+      onProgress?.(i + 1, total);
+    }
+  }
+
+  return {urls, failed};
 }
 
 // =============================================================================

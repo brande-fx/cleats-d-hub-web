@@ -1,5 +1,18 @@
 import React, {useState} from 'react';
-import {Edit3, Eye, EyeOff, Plus, Search, Trash2, Upload, X} from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit3,
+  Eye,
+  EyeOff,
+  Images,
+  Plus,
+  Search,
+  Star,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
 import {ResilientImage} from '../components/ResilientImage';
 import {useStoreData} from '../hooks/useStoreData';
 import {
@@ -7,8 +20,7 @@ import {
   saveProduct,
   SaveProductInput,
   toggleProductFlag,
-  uploadProductImage,
-  upsertCategory,
+  uploadProductImages,
 } from '../services/storeService';
 import {Product} from '../types';
 import {
@@ -27,11 +39,11 @@ const DEFAULT_UK_SIZES = [
   {size_label: 'UK 10', stock_quantity: 4, is_available: true, sort_order: 5},
 ];
 
-function createEmptyDraft(defaultCategoryId: string | null): SaveProductInput {
+function createEmptyDraft(): SaveProductInput {
   return {
     name: '',
     brand: '',
-    category_id: defaultCategoryId,
+    category_id: null,
     description: '',
     regular_price: 3999,
     discounted_price: null,
@@ -48,26 +60,33 @@ function createEmptyDraft(defaultCategoryId: string | null): SaveProductInput {
 }
 
 export const AdminProducts: React.FC = () => {
-  const {allProducts, categories, refreshStore} = useStoreData();
+  const {allProducts, refreshStore} = useStoreData();
   const [search, setSearch] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
-  const [draft, setDraft] = useState<SaveProductInput>(() =>
-    createEmptyDraft(categories[0]?.id || null)
-  );
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [draft, setDraft] = useState<SaveProductInput>(() => createEmptyDraft());
   const [newSizeInput, setNewSizeInput] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{completed: number; total: number} | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{type: 'error' | 'success'; text: string} | null>(null);
+  const [photoMessage, setPhotoMessage] = useState<{type: 'error' | 'success'; text: string} | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  const uploading = uploadProgress !== null;
+
   const openCreateModal = () => {
-    setDraft(createEmptyDraft(categories[0]?.id || null));
+    setDraft(createEmptyDraft());
+    setImageUrlInput('');
     setMessage(null);
+    setPhotoMessage(null);
     setEditorOpen(true);
   };
 
   const openEditModal = (product: Product) => {
+    const gallery = Array.from(
+      new Set([product.image_url, ...(product.gallery_urls || [])].filter(Boolean))
+    );
     setDraft({
       id: product.id,
       name: product.name,
@@ -76,8 +95,8 @@ export const AdminProducts: React.FC = () => {
       description: product.description,
       regular_price: product.regular_price,
       discounted_price: product.discounted_price,
-      image_url: product.image_url,
-      gallery_urls: product.gallery_urls.length ? product.gallery_urls : [product.image_url],
+      image_url: gallery[0] || '',
+      gallery_urls: gallery,
       is_active: product.is_active,
       is_featured: product.is_featured,
       is_new_arrival: product.is_new_arrival,
@@ -92,43 +111,130 @@ export const AdminProducts: React.FC = () => {
         sort_order: s.sort_order,
       })),
     });
+    setImageUrlInput('');
     setMessage(null);
+    setPhotoMessage(null);
     setEditorOpen(true);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setMessage(null);
+  const uploadBatchFiles = async (fileList: FileList | File[]) => {
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
+    setUploadProgress({completed: 0, total: files.length});
+    setPhotoMessage(null);
+
     try {
-      const publicUrl = await uploadProductImage(file);
-      setDraft((prev) => ({
-        ...prev,
-        image_url: publicUrl,
-        gallery_urls: [publicUrl, ...(prev.gallery_urls || []).filter((u) => u && u !== prev.image_url)],
-      }));
+      const {urls, failed} = await uploadProductImages(files, (completed, total) => {
+        setUploadProgress({completed, total});
+      });
+
+      if (urls.length > 0) {
+        setDraft((prev) => {
+          const existing = (prev.gallery_urls || []).filter(Boolean);
+          const merged = Array.from(new Set([...existing, ...urls]));
+          return {
+            ...prev,
+            image_url: merged[0] || '',
+            gallery_urls: merged,
+          };
+        });
+      }
+
+      if (failed.length > 0) {
+        const failedSummary = failed.map((f) => `${f.name} (${f.reason})`).join(', ');
+        setPhotoMessage({
+          type: 'error',
+          text:
+            urls.length > 0
+              ? `Uploaded ${urls.length} photo(s), but ${failed.length} failed: ${failedSummary}`
+              : `Failed to upload photos: ${failedSummary}`,
+        });
+      } else {
+        setPhotoMessage({
+          type: 'success',
+          text: `Added ${urls.length} photo${urls.length === 1 ? '' : 's'} to product gallery.`,
+        });
+      }
     } catch (err) {
-      setMessage({
+      setPhotoMessage({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to upload product image.',
+        text: err instanceof Error ? err.message : 'Failed to upload product images.',
       });
     } finally {
-      setUploading(false);
-      e.target.value = '';
+      setUploadProgress(null);
     }
   };
 
-  const handleCreateCategory = async () => {
-    if (!newCategoryName.trim()) return;
-    try {
-      const created = await upsertCategory({name: newCategoryName.trim()});
-      await refreshStore(true);
-      setDraft((prev) => ({...prev, category_id: created.id}));
-      setNewCategoryName('');
-    } catch (err) {
-      setMessage({type: 'error', text: err instanceof Error ? err.message : 'Could not add category.'});
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await uploadBatchFiles(files);
+    e.target.value = '';
+  };
+
+  const handleDropFiles = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingFiles(false);
+    if (uploading) return;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await uploadBatchFiles(e.dataTransfer.files);
     }
+  };
+
+  const handleAddImageUrl = () => {
+    const trimmed = imageUrlInput.trim();
+    if (!trimmed) return;
+    setDraft((prev) => {
+      const existing = (prev.gallery_urls || []).filter(Boolean);
+      const merged = Array.from(new Set([...existing, trimmed]));
+      return {
+        ...prev,
+        image_url: merged[0] || '',
+        gallery_urls: merged,
+      };
+    });
+    setImageUrlInput('');
+  };
+
+  const handleSetCoverImage = (index: number) => {
+    setDraft((prev) => {
+      const list = [...(prev.gallery_urls || [])];
+      if (index < 0 || index >= list.length) return prev;
+      const [chosen] = list.splice(index, 1);
+      const reordered = [chosen, ...list];
+      return {
+        ...prev,
+        image_url: reordered[0] || '',
+        gallery_urls: reordered,
+      };
+    });
+  };
+
+  const handleMoveImage = (index: number, direction: -1 | 1) => {
+    setDraft((prev) => {
+      const list = [...(prev.gallery_urls || [])];
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= list.length) return prev;
+      const temp = list[index];
+      list[index] = list[targetIndex];
+      list[targetIndex] = temp;
+      return {
+        ...prev,
+        image_url: list[0] || '',
+        gallery_urls: list,
+      };
+    });
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setDraft((prev) => {
+      const filteredGallery = (prev.gallery_urls || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        image_url: filteredGallery[0] || '',
+        gallery_urls: filteredGallery,
+      };
+    });
   };
 
   const handleAddSizeRow = () => {
@@ -214,9 +320,9 @@ export const AdminProducts: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-2xl font-extrabold text-[#1F2225]">Product Catalogue</h2>
+          <h2 className="font-display text-2xl font-extrabold text-[#1F2225]">Football Boots &amp; Cleats</h2>
           <p className="text-sm text-[#3C4044]/80">
-            Add, edit, price, upload images, and manage visibility for all shoes.
+            Add, edit, price, upload multiple photos, and manage visibility for all football shoes, boots, and cleats.
           </p>
         </div>
 
@@ -226,7 +332,7 @@ export const AdminProducts: React.FC = () => {
           className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[42px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] font-semibold text-sm rounded-md transition-colors cursor-pointer self-start"
         >
           <Plus className="w-4 h-4" />
-          <span>Add New Shoe</span>
+          <span>Add New Cleat / Boot</span>
         </button>
       </div>
 
@@ -249,7 +355,7 @@ export const AdminProducts: React.FC = () => {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products by name or brand…"
+          placeholder="Search cleats or boots by name or brand…"
           className="w-full pl-9 pr-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225]"
         />
       </div>
@@ -260,8 +366,7 @@ export const AdminProducts: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-[#E9E8E6] text-[#3C4044]">
               <tr>
-                <th className="px-4 py-3 font-semibold">Product</th>
-                <th className="px-4 py-3 font-semibold">Category</th>
+                <th className="px-4 py-3 font-semibold">Cleat / Boot</th>
                 <th className="px-4 py-3 font-semibold text-right">Price</th>
                 <th className="px-4 py-3 font-semibold text-right">Total Stock</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
@@ -276,16 +381,27 @@ export const AdminProducts: React.FC = () => {
                   <tr key={product.id} className="hover:bg-[#DDDCDB]/25">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-14 h-11 rounded-sm overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
+                        <div className="relative w-14 h-11 rounded-sm overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
                           <ResilientImage src={product.image_url} alt={product.name} />
+                          {(product.gallery_urls?.length || 0) > 1 && (
+                            <span className="absolute bottom-0.5 right-0.5 bg-[#1F2225]/85 text-[#F7F6F5] font-mono-num text-[10px] leading-none px-1 py-0.5 rounded-sm">
+                              +{product.gallery_urls.length - 1}
+                            </span>
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-[#1F2225] truncate max-w-[220px]">{product.name}</p>
-                          <p className="text-[#3C4044]/70">{product.brand}</p>
+                          <p className="text-[#3C4044]/70">
+                            {product.brand}
+                            {(product.gallery_urls?.length || 0) > 1 && (
+                              <span className="ml-1.5 text-[#3C4044]/60">
+                                · {product.gallery_urls.length} photos
+                              </span>
+                            )}
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[#3C4044]">{product.category_name || 'Footwear'}</td>
                     <td className="px-4 py-3 text-right font-mono-num">
                       <span className="font-semibold text-[#1F2225]">{formatCurrency(effective)}</span>
                       {effective < product.regular_price && (
@@ -354,7 +470,7 @@ export const AdminProducts: React.FC = () => {
           <div className="bg-[#F7F6F5] border border-[#3C4044]/20 rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 z-10 bg-[#DDDCDB] px-6 py-4 border-b border-[#3C4044]/15 flex items-center justify-between">
               <h3 className="font-display text-lg font-bold text-[#1F2225]">
-                {draft.id ? 'Edit Footwear Product' : 'Add New Footwear Product'}
+                {draft.id ? 'Edit Football Boot / Cleat' : 'Add New Football Boot / Cleat'}
               </h3>
               <button
                 type="button"
@@ -367,48 +483,179 @@ export const AdminProducts: React.FC = () => {
             </div>
 
             <form onSubmit={handleSave} className="p-6 space-y-6">
-              {/* Image Upload & Preview */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center bg-[#E9E8E6] p-4 rounded-lg border border-[#3C4044]/10">
-                <div className="sm:col-span-4 aspect-[4/3] bg-white rounded-md overflow-hidden border border-[#3C4044]/15">
-                  <ResilientImage src={draft.image_url} alt={draft.name || 'Preview'} />
-                </div>
-                <div className="sm:col-span-8 space-y-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <label className="inline-flex items-center gap-2 px-4 py-2 min-h-[38px] bg-[#3C4044] hover:bg-[#1F2225] text-[#F7F6F5] text-xs font-semibold rounded-md cursor-pointer">
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>{uploading ? 'Optimizing & Uploading…' : 'Upload / Replace Photo'}</span>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={handleImageUpload}
-                        disabled={uploading}
-                        className="sr-only"
-                      />
-                    </label>
-                    <span className="text-[11px] text-[#3C4044]/75">
-                      Auto-compressed to WebP for fast loading
-                    </span>
+              {/* Multi-Photo Upload & Gallery Manager */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (!uploading) setIsDraggingFiles(true);
+                }}
+                onDragLeave={() => setIsDraggingFiles(false)}
+                onDrop={handleDropFiles}
+                className={`space-y-4 p-4 rounded-lg border transition-colors ${
+                  isDraggingFiles
+                    ? 'bg-[#EDBF9B]/30 border-[#FD7B41]'
+                    : 'bg-[#E9E8E6] border-[#3C4044]/15'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Images className="w-4 h-4 text-[#3C4044]" />
+                      <h4 className="font-display text-sm font-bold text-[#1F2225]">
+                        Product Photos ({(draft.gallery_urls || []).length})
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-[#3C4044]/75 mt-0.5">
+                      Select or drag & drop multiple photos at once. The first photo is used as the store cover image.
+                    </p>
                   </div>
+
+                  <label className="inline-flex items-center justify-center gap-2 px-4 py-2 min-h-[38px] bg-[#3C4044] hover:bg-[#1F2225] text-[#F7F6F5] text-xs font-semibold rounded-md cursor-pointer shrink-0">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>
+                      {uploadProgress
+                        ? `Uploading ${uploadProgress.completed}/${uploadProgress.total}…`
+                        : 'Upload Multiple Photos'}
+                    </span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleImagesUpload}
+                      disabled={uploading}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
+
+                {photoMessage && (
+                  <div
+                    className={`p-2.5 rounded-md text-xs font-medium ${
+                      photoMessage.type === 'error'
+                        ? 'bg-red-50 border border-red-200 text-red-800'
+                        : 'bg-[#EDBF9B]/45 border border-[#3C4044]/15 text-[#1F2225]'
+                    }`}
+                  >
+                    {photoMessage.text}
+                  </div>
+                )}
+
+                {/* Gallery Grid */}
+                {(draft.gallery_urls || []).length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {(draft.gallery_urls || []).map((imgUrl, idx) => {
+                      const isCover = idx === 0;
+                      return (
+                        <div
+                          key={`${imgUrl}-${idx}`}
+                          className={`bg-white rounded-md overflow-hidden border ${
+                            isCover ? 'border-[#FD7B41] ring-1 ring-[#FD7B41]' : 'border-[#3C4044]/15'
+                          }`}
+                        >
+                          <div className="relative aspect-[4/3] bg-[#F7F6F5]">
+                            <ResilientImage src={imgUrl} alt={`Product photo ${idx + 1}`} />
+                            {isCover && (
+                              <span className="absolute top-1.5 left-1.5 bg-[#FD7B41] text-[#1F2225] text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
+                                Cover
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(idx)}
+                              title="Remove photo"
+                              aria-label={`Remove photo ${idx + 1}`}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-sm bg-[#1F2225]/80 hover:bg-red-700 text-white inline-flex items-center justify-center cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="px-2 py-1.5 flex items-center justify-between gap-1 border-t border-[#3C4044]/10 bg-[#F7F6F5]">
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveImage(idx, -1)}
+                                title="Move left"
+                                aria-label={`Move photo ${idx + 1} left`}
+                                className="p-1 rounded-sm text-[#3C4044] hover:bg-[#DDDCDB] disabled:opacity-30 cursor-pointer"
+                              >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === (draft.gallery_urls?.length || 1) - 1}
+                                onClick={() => handleMoveImage(idx, 1)}
+                                title="Move right"
+                                aria-label={`Move photo ${idx + 1} right`}
+                                className="p-1 rounded-sm text-[#3C4044] hover:bg-[#DDDCDB] disabled:opacity-30 cursor-pointer"
+                              >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {isCover ? (
+                              <span className="text-[10px] font-semibold text-[#3C4044]/75 pr-1">
+                                Main
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSetCoverImage(idx)}
+                                title="Set as cover photo"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-semibold text-[#3C4044] hover:bg-[#EDBF9B]/60 cursor-pointer"
+                              >
+                                <Star className="w-3 h-3" />
+                                <span>Make Cover</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="bg-white/75 border border-dashed border-[#3C4044]/25 rounded-md py-6 px-4 text-center text-xs text-[#3C4044]/75">
+                    No photos added yet. Click <strong>Upload Multiple Photos</strong> or drop image files here.
+                  </div>
+                )}
+
+                {/* Optional Paste Image URL */}
+                <div className="flex gap-2">
                   <input
                     type="url"
-                    value={draft.image_url}
-                    onChange={(e) => setDraft({...draft, image_url: e.target.value})}
-                    placeholder="Or paste an image URL"
-                    className="w-full px-3 py-2 bg-white border border-[#3C4044]/20 rounded-md text-xs text-[#1F2225]"
+                    value={imageUrlInput}
+                    onChange={(e) => setImageUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddImageUrl();
+                      }
+                    }}
+                    placeholder="Or paste an image URL and click Add Photo"
+                    className="flex-1 px-3 py-2 bg-white border border-[#3C4044]/20 rounded-md text-xs text-[#1F2225]"
                   />
+                  <button
+                    type="button"
+                    onClick={handleAddImageUrl}
+                    disabled={!imageUrlInput.trim()}
+                    className="px-3.5 py-2 bg-[#3C4044] hover:bg-[#1F2225] disabled:opacity-40 text-[#F7F6F5] text-xs font-semibold rounded-md cursor-pointer shrink-0"
+                  >
+                    + Add URL
+                  </button>
                 </div>
               </div>
 
               {/* Basic Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-[#3C4044]">Product Name *</label>
+                  <label className="block text-xs font-semibold text-[#3C4044]">Cleat / Boot Name *</label>
                   <input
                     type="text"
                     required
                     value={draft.name}
                     onChange={(e) => setDraft({...draft, name: e.target.value})}
-                    placeholder="e.g. Velocity 4 Carbon Runner"
+                    placeholder="e.g. Mercurial Vapor Pro FG Cleats"
                     className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
                   />
                 </div>
@@ -419,46 +666,9 @@ export const AdminProducts: React.FC = () => {
                     required
                     value={draft.brand}
                     onChange={(e) => setDraft({...draft, brand: e.target.value})}
-                    placeholder="e.g. Calcite Lab"
+                    placeholder="e.g. Nike, Adidas, Puma"
                     className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
                   />
-                </div>
-              </div>
-
-              {/* Category + Quick Add */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-[#3C4044]">Category</label>
-                  <select
-                    value={draft.category_id || ''}
-                    onChange={(e) => setDraft({...draft, category_id: e.target.value || null})}
-                    className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-[#3C4044]">Add New Category (Optional)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="e.g. Track Spikes"
-                      className="flex-1 px-3 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void handleCreateCategory()}
-                      className="px-3 py-2 bg-[#E9E8E6] hover:bg-[#DDDCDB] text-xs font-semibold rounded-md cursor-pointer"
-                    >
-                      Add
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -469,7 +679,7 @@ export const AdminProducts: React.FC = () => {
                   rows={3}
                   value={draft.description}
                   onChange={(e) => setDraft({...draft, description: e.target.value})}
-                  placeholder="Upper material, midsole cushioning, outsole grip, and recommended usage…"
+                  placeholder="Upper material, stud plate (FG/TF/AG/IC), fit profile, and pitch usage…"
                   className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
                 />
               </div>
@@ -511,7 +721,7 @@ export const AdminProducts: React.FC = () => {
                     type="text"
                     value={draft.offer_label}
                     onChange={(e) => setDraft({...draft, offer_label: e.target.value})}
-                    placeholder="e.g. Race Season Offer"
+                    placeholder="e.g. Matchday Drop"
                     className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
                   />
                 </div>
@@ -671,8 +881,8 @@ export const AdminProducts: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className="px-5 py-2.5 min-h-[40px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-xs font-bold rounded-md cursor-pointer"
+                  disabled={saving || uploading}
+                  className="px-5 py-2.5 min-h-[40px] bg-[#FD7B41] hover:bg-[#fc6b2b] disabled:opacity-50 text-[#1F2225] text-xs font-bold rounded-md cursor-pointer"
                 >
                   {saving ? 'Saving…' : draft.id ? 'Save Changes' : 'Create Product'}
                 </button>

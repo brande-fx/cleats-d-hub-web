@@ -5,12 +5,12 @@ import {ProductCard} from '../components/ProductCard';
 import {ResilientImage} from '../components/ResilientImage';
 import {useStoreData} from '../hooks/useStoreData';
 import {buildWhatsAppSupportUrl} from '../services/whatsappService';
-import {getTotalProductStock, resolvePublicAssetUrl} from '../utils/formatters';
+import {resolvePublicAssetUrl} from '../utils/formatters';
 
 type HomeCollectionTab = 'featured' | 'new' | 'bestsellers' | 'offers';
 
 export const HomePage: React.FC = () => {
-  const {products, categories, settings, loading} = useStoreData();
+  const {products, settings, loading} = useStoreData();
   const [activeTab, setActiveTab] = useState<HomeCollectionTab>('featured');
   const location = useLocation();
 
@@ -37,16 +37,6 @@ export const HomePage: React.FC = () => {
     return (list.length > 0 ? list : products).slice(0, 6);
   }, [activeTab, products]);
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const p of products) {
-      if (p.category_id) {
-        counts[p.category_id] = (counts[p.category_id] || 0) + 1;
-      }
-    }
-    return counts;
-  }, [products]);
-
   const supportWhatsAppUrl = buildWhatsAppSupportUrl(settings);
 
   const tabs: Array<{key: HomeCollectionTab; label: string}> = [
@@ -64,13 +54,13 @@ export const HomePage: React.FC = () => {
           <div className="lg:col-span-5 p-8 sm:p-10 lg:p-12 flex flex-col justify-between gap-8">
             <div className="space-y-5">
               <p className="text-xs font-semibold uppercase tracking-widest text-[#3C4044]/70">
-                Performance Footwear · Direct WhatsApp Ordering
+                Football Shoes, Boots &amp; Cleats · Direct WhatsApp Ordering
               </p>
               <h1 className="font-display text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold text-[#1F2225] leading-[1.1] tracking-tight text-balance">
                 Best Performance Cleats
               </h1>
               <p className="text-base text-[#3C4044]/85 leading-relaxed max-w-md">
-                Explore lightweight athletic silhouettes crafted with real-time UK size availability and effortless WhatsApp order confirmation.
+                Explore matchday football boots, firm-ground cleats, and turf trainers with real-time UK size availability and instant WhatsApp order confirmation.
               </p>
             </div>
 
@@ -106,10 +96,10 @@ export const HomePage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[#3C4044]/15">
           <div className="space-y-1">
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-[#1F2225]">
-              Footwear Lineup
+              Football Cleats &amp; Boots
             </h2>
             <p className="text-sm text-[#3C4044]/80">
-              Select your UK size directly on any pair or open full specifications.
+              Select your UK boot size directly on any pair or open full pitch specifications.
             </p>
           </div>
 
@@ -153,70 +143,20 @@ export const HomePage: React.FC = () => {
             to="/shop"
             className="inline-flex items-center gap-2 px-6 py-3 min-h-[44px] bg-[#3C4044] hover:bg-[#1F2225] text-[#F7F6F5] text-sm font-semibold rounded-md transition-colors"
           >
-            <span>Explore Full Catalogue ({products.length} Styles)</span>
+            <span>Explore Full Cleats Lineup ({products.length} Pairs)</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>
 
-      {/* 3. Shop by Category */}
-      <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-end justify-between gap-4 pb-6">
-          <div className="space-y-1">
-            <h2 className="font-display text-2xl font-bold text-[#1F2225]">Shop by Category</h2>
-            <p className="text-sm text-[#3C4044]/80">Purpose-built footwear across five athletic disciplines.</p>
-          </div>
-          <Link
-            to="/shop"
-            className="text-sm font-semibold text-[#3C4044] hover:text-[#FD7B41] whitespace-nowrap"
-          >
-            View all
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {categories.map((cat) => {
-            const count = categoryCounts[cat.id] || 0;
-            const inStockCount = products
-              .filter((p) => p.category_id === cat.id)
-              .reduce((acc, p) => acc + (getTotalProductStock(p.sizes) > 0 ? 1 : 0), 0);
-
-            return (
-              <Link
-                key={cat.id}
-                to={`/shop?category=${cat.slug}`}
-                className="group bg-[#F7F6F5] hover:bg-[#EDBF9B]/45 border border-[#3C4044]/15 rounded-lg p-5 flex flex-col justify-between gap-4 transition-colors"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-[#3C4044]/70 font-mono-num">
-                    <span>{count} {count === 1 ? 'model' : 'models'}</span>
-                    <span>{inStockCount} ready</span>
-                  </div>
-                  <h3 className="font-display text-lg font-bold text-[#1F2225] group-hover:text-[#3C4044]">
-                    {cat.name}
-                  </h3>
-                  <p className="text-xs text-[#3C4044]/80 leading-relaxed line-clamp-2">
-                    {cat.description}
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3C4044] group-hover:text-[#1F2225]">
-                  <span>Browse {cat.name}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* 4. Customer Support Band */}
-      <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-4">
+      {/* 3. Customer Support Band */}
+      <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 pt-6">
         <div className="bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div className="space-y-4">
             <div className="space-y-1">
               <h2 className="font-display text-xl font-bold text-[#1F2225]">Customer Support</h2>
               <p className="text-sm text-[#3C4044]/80">
-                Need help choosing your UK size or checking dispatch timing? Reach our team directly.
+                Need help choosing your UK boot size, stud soleplate, or dispatch timing? Reach our team directly.
               </p>
             </div>
 
