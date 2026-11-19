@@ -5,8 +5,8 @@
  */
 export async function optimizeProductImage(
   file: File,
-  maxDimension = 1200,
-  quality = 0.84
+  maxDimension = 1600,
+  quality = 0.9
 ): Promise<{blob: Blob; fileName: string; mimeType: string}> {
   if (!file.type || !file.type.startsWith('image/')) {
     throw new Error('Please select a valid image file (JPG, PNG, WebP, etc.).');
@@ -39,7 +39,9 @@ export async function optimizeProductImage(
           return;
         }
 
-        ctx.fillStyle = '#DDDCDB';
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = '#E8E7E5';
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 

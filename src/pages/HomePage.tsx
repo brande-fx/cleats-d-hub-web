@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {ArrowRight, Mail, MapPin, MessageCircle, Phone} from 'lucide-react';
 import {Link, useLocation} from 'react-router-dom';
+import {SEED_IMAGES} from '../assets/seedImages';
 import {ProductCard} from '../components/ProductCard';
 import {ResilientImage} from '../components/ResilientImage';
 import {useStoreData} from '../hooks/useStoreData';
@@ -100,8 +101,9 @@ export const HomePage: React.FC = () => {
 
           <div className="lg:col-span-7 relative min-h-[280px] sm:min-h-[360px] lg:min-h-[460px] bg-[#E8E7E5]">
             <ResilientImage
-              src={resolvePublicAssetUrl(settings.hero_image_url || '/assets/aistudio/download_6a122e79.jpg')}
+              src={resolvePublicAssetUrl(settings.hero_image_url || SEED_IMAGES.heroCampaign)}
               alt="Cleats D Hub flagship performance cleats"
+              priority
               className="w-full h-full lg:h-full object-cover"
             />
           </div>

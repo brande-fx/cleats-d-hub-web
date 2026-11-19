@@ -115,6 +115,7 @@ export const ProductDetailsPage: React.FC = () => {
               src={activeImage}
               alt={`${product.name} — Photo ${activeIndex + 1}`}
               fallbackLabel={product.name}
+              priority
               className="w-full h-full object-cover"
             />
 

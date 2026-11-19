@@ -16,11 +16,13 @@ import {isSupabaseConfigured, supabase} from './supabaseClient';
 import {buildWhatsAppOrderMessage, buildWhatsAppUrl} from './whatsappService';
 
 const STORAGE_KEYS = {
-  products: 'cleatsdhub_preview_products_v3',
+  products: 'cleatsdhub_preview_products_v4',
   categories: 'cleatsdhub_preview_categories_v3',
   orders: 'cleatsdhub_preview_orders_v3',
   settings: 'cleatsdhub_preview_settings_v4',
 };
+
+const LEGACY_HERO_PATH = '/assets/aistudio/download_6a122e79.jpg';
 
 const HERO_IMAGE_OVERRIDE_KEY = 'cleatsdhub_hero_image_override_v1';
 
@@ -58,10 +60,14 @@ function generateId(prefix: string): string {
 export async function fetchStoreSettings(): Promise<StoreSettings> {
   if (!isSupabaseConfigured || !supabase) {
     const local = readLocal<Partial<StoreSettings>>(STORAGE_KEYS.settings, DEFAULT_STORE_SETTINGS);
+    const resolvedHero =
+      local.hero_image_url && local.hero_image_url !== LEGACY_HERO_PATH
+        ? local.hero_image_url
+        : DEFAULT_STORE_SETTINGS.hero_image_url;
     return {
       ...DEFAULT_STORE_SETTINGS,
       ...local,
-      hero_image_url: local.hero_image_url || DEFAULT_STORE_SETTINGS.hero_image_url,
+      hero_image_url: resolvedHero,
     };
   }
 
@@ -81,13 +87,16 @@ export async function fetchStoreSettings(): Promise<StoreSettings> {
       localHeroOverride = '';
     }
   }
+  const dbHero = typeof data.hero_image_url === 'string' ? data.hero_image_url.trim() : '';
+  const resolvedHero =
+    (dbHero && dbHero !== LEGACY_HERO_PATH ? dbHero : '') ||
+    (localHeroOverride && localHeroOverride !== LEGACY_HERO_PATH ? localHeroOverride : '') ||
+    DEFAULT_STORE_SETTINGS.hero_image_url;
+
   return {
     ...DEFAULT_STORE_SETTINGS,
     ...data,
-    hero_image_url:
-      (typeof data.hero_image_url === 'string' && data.hero_image_url.trim()) ||
-      localHeroOverride ||
-      DEFAULT_STORE_SETTINGS.hero_image_url,
+    hero_image_url: resolvedHero,
     delivery_charge: Number(data.delivery_charge ?? 0),
     free_delivery_threshold: Number(data.free_delivery_threshold ?? 0),
   };
@@ -585,7 +594,7 @@ export async function uploadProductImage(file: File): Promise<string> {
 }
 
 export async function uploadHeroImage(file: File): Promise<string> {
-  const optimized = await optimizeProductImage(file, 1600, 0.86);
+  const optimized = await optimizeProductImage(file, 1920, 0.92);
 
   if (!isSupabaseConfigured || !supabase) {
     return blobToDataUrl(optimized.blob);

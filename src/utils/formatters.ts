@@ -82,6 +82,9 @@ export function resolvePublicAssetUrl(url?: string): string {
   }
   const base = import.meta.env.BASE_URL || '/';
   const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  if (cleanBase !== '/' && url.startsWith(cleanBase)) {
+    return url;
+  }
   const cleanPath = url.startsWith('/') ? url.slice(1) : url;
   return `${cleanBase}${cleanPath}`;
 }

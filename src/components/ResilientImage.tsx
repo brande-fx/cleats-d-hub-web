@@ -6,6 +6,7 @@ interface ResilientImageProps {
   alt: string;
   className?: string;
   fallbackLabel?: string;
+  priority?: boolean;
 }
 
 export const ResilientImage: React.FC<ResilientImageProps> = ({
@@ -13,6 +14,7 @@ export const ResilientImage: React.FC<ResilientImageProps> = ({
   alt,
   className = 'w-full h-full object-cover',
   fallbackLabel,
+  priority = false,
 }) => {
   const [hasError, setHasError] = useState(false);
 
@@ -39,7 +41,9 @@ export const ResilientImage: React.FC<ResilientImageProps> = ({
     <img
       src={src}
       alt={alt}
-      loading="lazy"
+      loading={priority ? 'eager' : 'lazy'}
+      decoding={priority ? 'sync' : 'async'}
+      fetchPriority={priority ? 'high' : 'auto'}
       referrerPolicy="no-referrer"
       onError={() => setHasError(true)}
       className={className}
