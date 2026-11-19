@@ -8,9 +8,8 @@ export async function optimizeProductImage(
   maxDimension = 1200,
   quality = 0.84
 ): Promise<{blob: Blob; fileName: string; mimeType: string}> {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error('Only JPG, PNG, and WebP images are supported.');
+  if (!file.type || !file.type.startsWith('image/')) {
+    throw new Error('Please select a valid image file (JPG, PNG, WebP, etc.).');
   }
 
   if (file.size > 10 * 1024 * 1024) {

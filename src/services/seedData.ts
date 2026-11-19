@@ -5,6 +5,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   id: 1,
   store_name: 'Cleats D Hub',
   store_logo_url: '/assets/aistudio/764661096_18022752785897591_8307935459680660719_n_a9cc3fb8.jpg',
+  hero_image_url: '/assets/aistudio/download_6a122e79.jpg',
   whatsapp_country_code: '91',
   whatsapp_number: '6909367070',
   contact_phone: '+91 6909367070',

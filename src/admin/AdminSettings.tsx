@@ -1,14 +1,18 @@
 import React, {useEffect, useState} from 'react';
-import {Save, Upload} from 'lucide-react';
+import {Image as ImageIcon, RotateCcw, Save, Upload} from 'lucide-react';
+import {ResilientImage} from '../components/ResilientImage';
 import {useStoreData} from '../hooks/useStoreData';
-import {updateStoreSettings, uploadProductImage} from '../services/storeService';
+import {DEFAULT_STORE_SETTINGS} from '../services/seedData';
+import {updateStoreSettings, uploadHeroImage, uploadProductImage} from '../services/storeService';
 import {StoreSettings} from '../types';
+import {resolvePublicAssetUrl} from '../utils/formatters';
 
 export const AdminSettings: React.FC = () => {
   const {settings, refreshStore} = useStoreData();
   const [form, setForm] = useState<StoreSettings>(settings);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [feedback, setFeedback] = useState<{type: 'error' | 'success'; text: string} | null>(null);
 
   useEffect(() => {
@@ -28,6 +32,47 @@ export const AdminSettings: React.FC = () => {
     } finally {
       setUploadingLogo(false);
       e.target.value = '';
+    }
+  };
+
+  const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingHero(true);
+    setFeedback(null);
+    try {
+      const url = await uploadHeroImage(file);
+      setForm((prev) => ({...prev, hero_image_url: url}));
+      await updateStoreSettings({hero_image_url: url});
+      await refreshStore(true);
+      setFeedback({type: 'success', text: 'Homepage hero image updated.'});
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Hero image upload failed.',
+      });
+    } finally {
+      setUploadingHero(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleResetHeroImage = async () => {
+    setUploadingHero(true);
+    setFeedback(null);
+    try {
+      const fallbackUrl = DEFAULT_STORE_SETTINGS.hero_image_url;
+      setForm((prev) => ({...prev, hero_image_url: fallbackUrl}));
+      await updateStoreSettings({hero_image_url: fallbackUrl});
+      await refreshStore(true);
+      setFeedback({type: 'success', text: 'Homepage hero image reset to default.'});
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Unable to reset hero image.',
+      });
+    } finally {
+      setUploadingHero(false);
     }
   };
 
@@ -98,7 +143,7 @@ export const AdminSettings: React.FC = () => {
               <label className="block text-xs font-semibold text-[#3C4044]">Store Logo URL or Upload</label>
               <div className="flex gap-2">
                 <input
-                  type="url"
+                  type="text"
                   value={form.store_logo_url}
                   onChange={(e) => setForm({...form, store_logo_url: e.target.value})}
                   placeholder="Optional logo image URL"
@@ -109,11 +154,65 @@ export const AdminSettings: React.FC = () => {
                   <span>{uploadingLogo ? '…' : 'Upload'}</span>
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     onChange={handleLogoUpload}
                     className="sr-only"
                   />
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Homepage Hero Image */}
+          <div className="pt-2 space-y-2.5">
+            <label className="block text-xs font-semibold text-[#3C4044]">
+              Homepage Hero Image (Main Banner)
+            </label>
+            <div className="bg-white border border-[#3C4044]/15 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="w-full sm:w-44 aspect-[16/10] rounded-md overflow-hidden bg-[#E8E7E5] border border-[#3C4044]/10 shrink-0">
+                <ResilientImage
+                  src={resolvePublicAssetUrl(form.hero_image_url || DEFAULT_STORE_SETTINGS.hero_image_url)}
+                  alt="Homepage hero preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[38px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-xs font-bold rounded-md cursor-pointer transition-colors">
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    <span>{uploadingHero ? 'Uploading Image…' : 'Change Hero Image'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingHero}
+                      onChange={handleHeroUpload}
+                      className="sr-only"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={uploadingHero}
+                    onClick={() => void handleResetHeroImage()}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[38px] bg-[#E9E8E6] hover:bg-[#DDDCDB] text-[#3C4044] text-xs font-semibold rounded-md cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset Default</span>
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  value={form.hero_image_url}
+                  onChange={(e) => setForm({...form, hero_image_url: e.target.value})}
+                  placeholder="Or paste any image URL (https://...)"
+                  aria-label="Homepage hero image URL"
+                  className="w-full px-3 py-2 bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-xs text-[#1F2225]"
+                />
+                <p className="text-[11px] text-[#3C4044]/70">
+                  Upload any photo from your device or paste an image link to update the main hero banner on the storefront.
+                </p>
               </div>
             </div>
           </div>

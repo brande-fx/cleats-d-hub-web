@@ -99,6 +99,7 @@ export interface StoreSettings {
   id: number;
   store_name: string;
   store_logo_url: string;
+  hero_image_url: string;
   whatsapp_country_code: string;
   whatsapp_number: string;
   contact_phone: string;

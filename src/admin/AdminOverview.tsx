@@ -1,13 +1,34 @@
 import React, {useState} from 'react';
-import {AlertTriangle, ArrowRight, CheckCircle2, Clock, Edit3, Package, Trash2, X} from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Edit3,
+  Image as ImageIcon,
+  Package,
+  RotateCcw,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
+import {ResilientImage} from '../components/ResilientImage';
 import {useStoreData} from '../hooks/useStoreData';
-import {deleteOrder, updateOrderDetails, updateOrderStatus} from '../services/storeService';
+import {DEFAULT_STORE_SETTINGS} from '../services/seedData';
+import {
+  deleteOrder,
+  updateOrderDetails,
+  updateOrderStatus,
+  updateStoreSettings,
+  uploadHeroImage,
+} from '../services/storeService';
 import {Order, OrderStatus} from '../types';
 import {
   formatCurrency,
   formatDateShort,
   getTotalProductStock,
   isLowStockProduct,
+  resolvePublicAssetUrl,
 } from '../utils/formatters';
 import {AdminSection} from './AdminLayout';
 
@@ -33,7 +54,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   onNavigate,
   onRefreshOrders,
 }) => {
-  const {allProducts} = useStoreData();
+  const {allProducts, settings, refreshStore} = useStoreData();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [editForm, setEditForm] = useState({
@@ -50,6 +71,11 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletingOrder, setDeletingOrder] = useState(false);
   const [orderNotice, setOrderNotice] = useState<{type: 'error' | 'success'; text: string} | null>(null);
+
+  const [heroModalOpen, setHeroModalOpen] = useState(false);
+  const [heroUrlDraft, setHeroUrlDraft] = useState('');
+  const [savingHero, setSavingHero] = useState(false);
+  const [heroFeedback, setHeroFeedback] = useState<{type: 'error' | 'success'; text: string} | null>(null);
 
   const totalProducts = allProducts.length;
   const activeProducts = allProducts.filter((p) => p.is_active).length;
@@ -167,6 +193,76 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
     }
   };
 
+  const openHeroModal = () => {
+    setHeroUrlDraft(settings.hero_image_url || DEFAULT_STORE_SETTINGS.hero_image_url);
+    setHeroFeedback(null);
+    setHeroModalOpen(true);
+  };
+
+  const handleOverviewHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSavingHero(true);
+    setHeroFeedback(null);
+    try {
+      const url = await uploadHeroImage(file);
+      setHeroUrlDraft(url);
+      await updateStoreSettings({hero_image_url: url});
+      await refreshStore(true);
+      setHeroFeedback({type: 'success', text: 'Homepage hero image updated.'});
+    } catch (err) {
+      setHeroFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Unable to upload hero image.',
+      });
+    } finally {
+      setSavingHero(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveHeroUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = heroUrlDraft.trim();
+    if (!trimmed) {
+      setHeroFeedback({type: 'error', text: 'Enter an image URL or upload an image file.'});
+      return;
+    }
+    setSavingHero(true);
+    setHeroFeedback(null);
+    try {
+      await updateStoreSettings({hero_image_url: trimmed});
+      await refreshStore(true);
+      setHeroFeedback({type: 'success', text: 'Homepage hero image updated.'});
+    } catch (err) {
+      setHeroFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Unable to save hero image.',
+      });
+    } finally {
+      setSavingHero(false);
+    }
+  };
+
+  const handleOverviewHeroReset = async () => {
+    setSavingHero(true);
+    setHeroFeedback(null);
+    try {
+      const fallbackUrl = DEFAULT_STORE_SETTINGS.hero_image_url;
+      setHeroUrlDraft(fallbackUrl);
+      await updateStoreSettings({hero_image_url: fallbackUrl});
+      await refreshStore(true);
+      setHeroFeedback({type: 'success', text: 'Reset to default hero image.'});
+    } catch (err) {
+      setHeroFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Unable to reset hero image.',
+      });
+    } finally {
+      setSavingHero(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -176,14 +272,24 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             Live snapshot of your football boots &amp; cleats catalogue, UK size stock health, and WhatsApp order activity.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => onNavigate('products')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[40px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] font-semibold text-xs rounded-md transition-colors cursor-pointer self-start"
-        >
-          <span>Manage Products</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start">
+          <button
+            type="button"
+            onClick={openHeroModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[40px] bg-[#E9E8E6] hover:bg-[#DDDCDB] border border-[#3C4044]/20 text-[#1F2225] font-semibold text-xs rounded-md transition-colors cursor-pointer"
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            <span>Change Hero Image</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('products')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[40px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] font-semibold text-xs rounded-md transition-colors cursor-pointer"
+          >
+            <span>Manage Products</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* KPI Grid */}
@@ -559,6 +665,107 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                     {savingEdit ? 'Saving…' : 'Save Order Changes'}
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Homepage Hero Image Modal */}
+      {heroModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1F2225]/60">
+          <div className="bg-[#F7F6F5] border border-[#3C4044]/20 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 z-10 bg-[#DDDCDB] px-6 py-4 border-b border-[#3C4044]/15 flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-base font-bold text-[#1F2225]">
+                  Change Homepage Hero Image
+                </h3>
+                <p className="text-xs text-[#3C4044]/75">
+                  Upload any photo or paste an image URL for the main storefront banner.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHeroModalOpen(false)}
+                className="p-1.5 text-[#3C4044] hover:text-[#1F2225] cursor-pointer"
+                aria-label="Close hero image editor"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveHeroUrl} className="p-6 space-y-5">
+              <div className="w-full aspect-[16/9] rounded-lg overflow-hidden bg-[#E8E7E5] border border-[#3C4044]/15">
+                <ResilientImage
+                  src={resolvePublicAssetUrl(heroUrlDraft || DEFAULT_STORE_SETTINGS.hero_image_url)}
+                  alt="Hero banner preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <label className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[40px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] text-xs font-bold rounded-md cursor-pointer transition-colors">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{savingHero ? 'Uploading…' : 'Upload New Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={savingHero}
+                    onChange={handleOverviewHeroUpload}
+                    className="sr-only"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  disabled={savingHero}
+                  onClick={() => void handleOverviewHeroReset()}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 min-h-[40px] bg-[#E9E8E6] hover:bg-[#DDDCDB] text-[#3C4044] text-xs font-semibold rounded-md cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Default</span>
+                </button>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#3C4044]">Or Paste Image URL</label>
+                <input
+                  type="text"
+                  value={heroUrlDraft}
+                  onChange={(e) => setHeroUrlDraft(e.target.value)}
+                  placeholder="https://example.com/my-cleats-banner.jpg"
+                  className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-xs text-[#1F2225]"
+                />
+              </div>
+
+              {heroFeedback && (
+                <div
+                  className={`p-3 rounded-md text-xs font-medium ${
+                    heroFeedback.type === 'error'
+                      ? 'bg-red-50 border border-red-200 text-red-800'
+                      : 'bg-[#EDBF9B]/45 border border-[#3C4044]/15 text-[#1F2225]'
+                  }`}
+                >
+                  {heroFeedback.text}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#3C4044]/10">
+                <button
+                  type="button"
+                  disabled={savingHero}
+                  onClick={() => setHeroModalOpen(false)}
+                  className="px-4 py-2 min-h-[40px] bg-[#E9E8E6] hover:bg-[#DDDCDB] text-[#3C4044] text-xs font-semibold rounded-md cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingHero}
+                  className="px-5 py-2 min-h-[40px] bg-[#3C4044] hover:bg-[#1F2225] text-[#F7F6F5] text-xs font-bold rounded-md cursor-pointer disabled:opacity-50"
+                >
+                  {savingHero ? 'Saving…' : 'Save Image URL'}
+                </button>
               </div>
             </form>
           </div>

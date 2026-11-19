@@ -100,6 +100,7 @@ create table if not exists public.store_settings (
   id integer primary key default 1 check (id = 1),
   store_name text not null default 'Cleats D Hub',
   store_logo_url text default '/assets/aistudio/764661096_18022752785897591_8307935459680660719_n_a9cc3fb8.jpg',
+  hero_image_url text default '/assets/aistudio/download_6a122e79.jpg',
   whatsapp_country_code text not null default '91',
   whatsapp_number text not null default '6909367070',
   contact_phone text not null default '+91 6909367070',

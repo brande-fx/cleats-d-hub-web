@@ -22,6 +22,8 @@ const STORAGE_KEYS = {
   settings: 'cleatsdhub_preview_settings_v4',
 };
 
+const HERO_IMAGE_OVERRIDE_KEY = 'cleatsdhub_hero_image_override_v1';
+
 function readLocal<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -55,7 +57,12 @@ function generateId(prefix: string): string {
 // =============================================================================
 export async function fetchStoreSettings(): Promise<StoreSettings> {
   if (!isSupabaseConfigured || !supabase) {
-    return readLocal<StoreSettings>(STORAGE_KEYS.settings, DEFAULT_STORE_SETTINGS);
+    const local = readLocal<Partial<StoreSettings>>(STORAGE_KEYS.settings, DEFAULT_STORE_SETTINGS);
+    return {
+      ...DEFAULT_STORE_SETTINGS,
+      ...local,
+      hero_image_url: local.hero_image_url || DEFAULT_STORE_SETTINGS.hero_image_url,
+    };
   }
 
   const {data, error} = await supabase.from('store_settings').select('*').eq('id', 1).maybeSingle();
@@ -65,9 +72,22 @@ export async function fetchStoreSettings(): Promise<StoreSettings> {
   if (!data) {
     return DEFAULT_STORE_SETTINGS;
   }
+  const hasHeroColumn = Object.prototype.hasOwnProperty.call(data, 'hero_image_url');
+  let localHeroOverride = '';
+  if (!hasHeroColumn) {
+    try {
+      localHeroOverride = localStorage.getItem(HERO_IMAGE_OVERRIDE_KEY) || '';
+    } catch {
+      localHeroOverride = '';
+    }
+  }
   return {
     ...DEFAULT_STORE_SETTINGS,
     ...data,
+    hero_image_url:
+      (typeof data.hero_image_url === 'string' && data.hero_image_url.trim()) ||
+      localHeroOverride ||
+      DEFAULT_STORE_SETTINGS.hero_image_url,
     delivery_charge: Number(data.delivery_charge ?? 0),
     free_delivery_threshold: Number(data.free_delivery_threshold ?? 0),
   };
@@ -76,7 +96,7 @@ export async function fetchStoreSettings(): Promise<StoreSettings> {
 export async function updateStoreSettings(patch: Partial<StoreSettings>): Promise<StoreSettings> {
   if (!isSupabaseConfigured || !supabase) {
     const current = readLocal<StoreSettings>(STORAGE_KEYS.settings, DEFAULT_STORE_SETTINGS);
-    const updated = {...current, ...patch, id: 1};
+    const updated = {...DEFAULT_STORE_SETTINGS, ...current, ...patch, id: 1};
     writeLocal(STORAGE_KEYS.settings, updated);
     return updated;
   }
@@ -87,9 +107,64 @@ export async function updateStoreSettings(patch: Partial<StoreSettings>): Promis
   };
   const {data, error} = await supabase.from('store_settings').upsert(payload).select().single();
   if (error) {
+    const missingHeroColumn =
+      error.message.toLowerCase().includes('hero_image_url') &&
+      Object.prototype.hasOwnProperty.call(patch, 'hero_image_url');
+
+    if (missingHeroColumn) {
+      const {hero_image_url, ...restPatch} = patch;
+      try {
+        if (hero_image_url) {
+          localStorage.setItem(HERO_IMAGE_OVERRIDE_KEY, hero_image_url);
+        } else {
+          localStorage.removeItem(HERO_IMAGE_OVERRIDE_KEY);
+        }
+      } catch {
+        // Ignore storage errors
+      }
+
+      if (Object.keys(restPatch).length > 0) {
+        const {data: fallbackData, error: fallbackError} = await supabase
+          .from('store_settings')
+          .upsert({...restPatch, id: 1})
+          .select()
+          .single();
+        if (fallbackError) {
+          throw new Error(`Failed to save store settings: ${fallbackError.message}`);
+        }
+        return {
+          ...DEFAULT_STORE_SETTINGS,
+          ...(fallbackData as StoreSettings),
+          hero_image_url: hero_image_url || DEFAULT_STORE_SETTINGS.hero_image_url,
+        };
+      }
+
+      const current = await fetchStoreSettings();
+      return {
+        ...current,
+        hero_image_url: hero_image_url || DEFAULT_STORE_SETTINGS.hero_image_url,
+      };
+    }
+
     throw new Error(`Failed to save store settings: ${error.message}`);
   }
-  return data as StoreSettings;
+
+  if (Object.prototype.hasOwnProperty.call(patch, 'hero_image_url')) {
+    try {
+      localStorage.removeItem(HERO_IMAGE_OVERRIDE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  return {
+    ...DEFAULT_STORE_SETTINGS,
+    ...(data as StoreSettings),
+    hero_image_url:
+      (typeof (data as StoreSettings).hero_image_url === 'string' &&
+        (data as StoreSettings).hero_image_url.trim()) ||
+      DEFAULT_STORE_SETTINGS.hero_image_url,
+  };
 }
 
 // =============================================================================
@@ -503,6 +578,30 @@ export async function uploadProductImage(file: File): Promise<string> {
 
   if (uploadError) {
     throw new Error(`Image upload failed: ${uploadError.message}`);
+  }
+
+  const {data} = supabase.storage.from('product-images').getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+export async function uploadHeroImage(file: File): Promise<string> {
+  const optimized = await optimizeProductImage(file, 1600, 0.86);
+
+  if (!isSupabaseConfigured || !supabase) {
+    return blobToDataUrl(optimized.blob);
+  }
+
+  const filePath = `hero/${optimized.fileName}`;
+  const {error: uploadError} = await supabase.storage
+    .from('product-images')
+    .upload(filePath, optimized.blob, {
+      contentType: optimized.mimeType,
+      cacheControl: '31536000',
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(`Hero image upload failed: ${uploadError.message}`);
   }
 
   const {data} = supabase.storage.from('product-images').getPublicUrl(filePath);

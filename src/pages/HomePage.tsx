@@ -100,7 +100,7 @@ export const HomePage: React.FC = () => {
 
           <div className="lg:col-span-7 relative min-h-[280px] sm:min-h-[360px] lg:min-h-[460px] bg-[#E8E7E5]">
             <ResilientImage
-              src={resolvePublicAssetUrl('/assets/aistudio/download_6a122e79.jpg')}
+              src={resolvePublicAssetUrl(settings.hero_image_url || '/assets/aistudio/download_6a122e79.jpg')}
               alt="Cleats D Hub flagship performance cleats"
               className="w-full h-full lg:h-full object-cover"
             />
