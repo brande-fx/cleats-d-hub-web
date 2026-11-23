@@ -77,9 +77,22 @@ function createEmptyDraft(section: ProductSection = 'shoes'): SaveProductInput {
   };
 }
 
-export const AdminProducts: React.FC = () => {
+interface AdminProductsProps {
+  activeCatalogSection?: 'all' | ProductSection;
+  onChangeCatalogSection?: (section: 'all' | ProductSection) => void;
+}
+
+export const AdminProducts: React.FC<AdminProductsProps> = ({
+  activeCatalogSection,
+  onChangeCatalogSection,
+}) => {
   const {allProducts, refreshStore} = useStoreData();
-  const [sectionFilter, setSectionFilter] = useState<'all' | ProductSection>('all');
+  const [internalSectionFilter, setInternalSectionFilter] = useState<'all' | ProductSection>('all');
+  const sectionFilter = activeCatalogSection ?? internalSectionFilter;
+  const setSectionFilter = (next: 'all' | ProductSection) => {
+    setInternalSectionFilter(next);
+    onChangeCatalogSection?.(next);
+  };
   const [search, setSearch] = useState('');
   const [brandFilter, setBrandFilter] = useState('all');
   const [editorOpen, setEditorOpen] = useState(false);

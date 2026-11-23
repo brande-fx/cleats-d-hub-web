@@ -71,6 +71,11 @@ export function normalizeProductSection(value?: string | null): ProductSection {
   return 'shoes';
 }
 
+export function getProductSectionLabel(section?: ProductSection | string | null): string {
+  const key = normalizeProductSection(section);
+  return PRODUCT_SECTION_MAP[key].label;
+}
+
 export function formatCurrency(amount: number): string {
   const safeAmount = Number.isFinite(amount) ? amount : 0;
   return new Intl.NumberFormat('en-IN', {
