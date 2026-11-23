@@ -8,9 +8,13 @@ import {defineConfig} from 'vite';
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(() => {
+  const rawBase = (process.env.VITE_BASE_PATH || '/').trim();
+  const trimmedBase = rawBase.replace(/^\/+|\/+$/g, '');
+  const base = trimmedBase ? `/${trimmedBase}/` : '/';
+
   return {
-    // Set VITE_BASE_PATH="/your-repo-name/" in GitHub Actions for GitHub Pages
-    base: process.env.VITE_BASE_PATH || '/',
+    // Automatically set by GitHub Actions from steps.pages.outputs.base_path ("/" on custom domains)
+    base,
     plugins: [
       react(),
       tailwindcss(),
