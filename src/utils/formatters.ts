@@ -1,6 +1,75 @@
-import {Product, ProductSize} from '../types';
+import {Product, ProductSection, ProductSize} from '../types';
 
 export const LOW_STOCK_THRESHOLD = 4;
+
+export interface ProductSectionMeta {
+  key: ProductSection;
+  label: string;
+  navLabel: string;
+  fullTitle: string;
+  singular: string;
+  unit: string;
+  unitSingular: string;
+  sizeHeading: string;
+  description: string;
+}
+
+export const PRODUCT_SECTION_LIST: ProductSectionMeta[] = [
+  {
+    key: 'shoes',
+    label: 'Shoes',
+    navLabel: 'Shoes',
+    fullTitle: 'Football Shoes & Cleats',
+    singular: 'Shoe / Cleat',
+    unit: 'pairs',
+    unitSingular: 'pair',
+    sizeHeading: 'Select Boot Size',
+    description: 'Firm-ground cleats, turf boots, artificial grass studs, and indoor futsal shoes.',
+  },
+  {
+    key: 'jerseys',
+    label: 'Football Jerseys',
+    navLabel: 'Jerseys',
+    fullTitle: 'Football Jerseys',
+    singular: 'Football Jersey',
+    unit: 'pcs',
+    unitSingular: 'piece',
+    sizeHeading: 'Select Jersey Size',
+    description: 'Matchday home, away, and breathable training kits engineered for pitch comfort.',
+  },
+  {
+    key: 'accessories',
+    label: 'Accessories',
+    navLabel: 'Accessories',
+    fullTitle: 'Football Accessories',
+    singular: 'Accessory',
+    unit: 'units',
+    unitSingular: 'unit',
+    sizeHeading: 'Select Size / Option',
+    description: 'Match footballs, carbon shin guards, and pro-grip goalkeeper gloves.',
+  },
+];
+
+export const PRODUCT_SECTION_MAP: Record<ProductSection, ProductSectionMeta> = {
+  shoes: PRODUCT_SECTION_LIST[0],
+  jerseys: PRODUCT_SECTION_LIST[1],
+  accessories: PRODUCT_SECTION_LIST[2],
+};
+
+export function normalizeProductSection(value?: string | null): ProductSection {
+  const normalized = (value || '').trim().toLowerCase();
+  if (normalized === 'jerseys' || normalized === 'jersey' || normalized.includes('jersey')) {
+    return 'jerseys';
+  }
+  if (
+    normalized === 'accessories' ||
+    normalized === 'accessory' ||
+    normalized.includes('accessor')
+  ) {
+    return 'accessories';
+  }
+  return 'shoes';
+}
 
 export function formatCurrency(amount: number): string {
   const safeAmount = Number.isFinite(amount) ? amount : 0;

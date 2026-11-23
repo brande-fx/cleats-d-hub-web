@@ -3,7 +3,7 @@ import {Save, Tag, Trash2} from 'lucide-react';
 import {useStoreData} from '../hooks/useStoreData';
 import {toggleProductFlag, updateStoreSettings} from '../services/storeService';
 import {Product} from '../types';
-import {computeDiscountPercentage, formatCurrency} from '../utils/formatters';
+import {computeDiscountPercentage, formatCurrency, PRODUCT_SECTION_MAP} from '../utils/formatters';
 
 export const AdminOffers: React.FC = () => {
   const {allProducts, settings, refreshStore} = useStoreData();
@@ -152,7 +152,7 @@ export const AdminOffers: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-[#E9E8E6] text-[#3C4044]">
               <tr>
-                <th className="px-4 py-3 font-semibold">Cleat / Boot</th>
+                <th className="px-4 py-3 font-semibold">Product</th>
                 <th className="px-4 py-3 font-semibold text-right">Regular Price</th>
                 <th className="px-4 py-3 font-semibold">Sale Price (₹)</th>
                 <th className="px-4 py-3 font-semibold">Offer Label</th>
@@ -168,12 +168,15 @@ export const AdminOffers: React.FC = () => {
                 };
                 const numericSale = currentEdit.price ? Number(currentEdit.price) : null;
                 const previewPct = computeDiscountPercentage(product.regular_price, numericSale);
+                const secMeta = PRODUCT_SECTION_MAP[product.product_section || 'shoes'];
 
                 return (
                   <tr key={product.id}>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-[#1F2225]">{product.name}</p>
-                      <p className="text-[#3C4044]/70">{product.brand}</p>
+                      <p className="text-[#3C4044]/70">
+                        {product.brand} · {secMeta.label}
+                      </p>
                     </td>
                     <td className="px-4 py-3 text-right font-mono-num font-semibold">
                       {formatCurrency(product.regular_price)}

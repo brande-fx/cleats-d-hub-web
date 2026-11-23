@@ -74,7 +74,7 @@ export function buildWhatsAppUrl(settings: StoreSettings, message: string): stri
 export function buildWhatsAppSupportUrl(settings: StoreSettings, topic?: string): string {
   const text = topic
     ? `Hi ${settings.store_name}, I have a question regarding: ${topic}`
-    : `Hi ${settings.store_name}, I would like assistance with football boot sizing or an order.`;
+    : `Hi ${settings.store_name}, I would like assistance with sizing for football boots, jerseys, or accessories.`;
   return buildWhatsAppUrl(settings, text);
 }
 

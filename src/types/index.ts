@@ -24,11 +24,14 @@ export interface ProductSize {
   sort_order: number;
 }
 
+export type ProductSection = 'shoes' | 'jerseys' | 'accessories';
+
 export interface Product {
   id: string;
   name: string;
   slug: string;
   brand: string;
+  product_section: ProductSection;
   category_id: string | null;
   category_name?: string;
   category_slug?: string;

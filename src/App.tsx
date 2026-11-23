@@ -19,7 +19,7 @@ const ScrollAndTitleManager: React.FC = () => {
   useEffect(() => {
     document.title = pathname.startsWith('/admin')
       ? `Admin Dashboard · ${settings.store_name}`
-      : `${settings.store_name} — Performance & Everyday Athletic Shoes`;
+      : `${settings.store_name} — Football Shoes, Jerseys & Accessories`;
   }, [pathname, settings.store_name]);
 
   useEffect(() => {

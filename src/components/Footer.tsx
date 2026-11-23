@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
               <p className="font-display text-lg font-bold text-[#F7F6F5]">{settings.store_name}</p>
             </div>
             <p className="text-sm text-[#DDDCDB]/80 leading-relaxed max-w-xs">
-              Dedicated football store for matchday cleats, firm-ground boots, and turf shoes with live UK size availability and direct WhatsApp ordering.
+              Dedicated football store for matchday shoes &amp; cleats, authentic football jerseys, and pitch accessories with live stock and instant WhatsApp ordering.
             </p>
             <p className="text-xs text-[#EDBF9B]">{settings.store_address}</p>
           </div>
@@ -36,8 +36,18 @@ export const Footer: React.FC = () => {
             <h3 className="text-xs font-semibold uppercase tracking-wider text-[#EDBF9B]">Football Store</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/shop" className="hover:text-[#FD7B41] transition-colors">
-                  All Cleats &amp; Boots
+                <Link to="/shop?section=shoes" className="hover:text-[#FD7B41] transition-colors">
+                  Shoes &amp; Cleats
+                </Link>
+              </li>
+              <li>
+                <Link to="/shop?section=jerseys" className="hover:text-[#FD7B41] transition-colors">
+                  Football Jerseys
+                </Link>
+              </li>
+              <li>
+                <Link to="/shop?section=accessories" className="hover:text-[#FD7B41] transition-colors">
+                  Accessories
                 </Link>
               </li>
               <li>
@@ -48,11 +58,6 @@ export const Footer: React.FC = () => {
               <li>
                 <Link to="/checkout" className="hover:text-[#FD7B41] transition-colors">
                   Cart &amp; Checkout
-                </Link>
-              </li>
-              <li>
-                <Link to="/#contact" className="hover:text-[#FD7B41] transition-colors">
-                  Contact &amp; Sizing Help
                 </Link>
               </li>
             </ul>

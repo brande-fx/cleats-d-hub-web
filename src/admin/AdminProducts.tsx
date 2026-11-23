@@ -22,30 +22,48 @@ import {
   toggleProductFlag,
   uploadProductImages,
 } from '../services/storeService';
-import {Product} from '../types';
+import {Product, ProductSection} from '../types';
 import {
   computeDiscountPercentage,
   formatCurrency,
   getEffectivePrice,
   getSortedSizes,
   getTotalProductStock,
+  PRODUCT_SECTION_LIST,
+  PRODUCT_SECTION_MAP,
 } from '../utils/formatters';
 
-const DEFAULT_UK_SIZES = [
-  {size_label: 'UK 6', stock_quantity: 5, is_available: true, sort_order: 1},
-  {size_label: 'UK 7', stock_quantity: 8, is_available: true, sort_order: 2},
-  {size_label: 'UK 8', stock_quantity: 10, is_available: true, sort_order: 3},
-  {size_label: 'UK 9', stock_quantity: 6, is_available: true, sort_order: 4},
-  {size_label: 'UK 10', stock_quantity: 4, is_available: true, sort_order: 5},
-];
+const DEFAULT_SIZES_BY_SECTION: Record<
+  ProductSection,
+  Array<{size_label: string; stock_quantity: number; is_available: boolean; sort_order: number}>
+> = {
+  shoes: [
+    {size_label: 'UK 6', stock_quantity: 5, is_available: true, sort_order: 1},
+    {size_label: 'UK 7', stock_quantity: 8, is_available: true, sort_order: 2},
+    {size_label: 'UK 8', stock_quantity: 10, is_available: true, sort_order: 3},
+    {size_label: 'UK 9', stock_quantity: 6, is_available: true, sort_order: 4},
+    {size_label: 'UK 10', stock_quantity: 4, is_available: true, sort_order: 5},
+  ],
+  jerseys: [
+    {size_label: 'S', stock_quantity: 6, is_available: true, sort_order: 1},
+    {size_label: 'M', stock_quantity: 10, is_available: true, sort_order: 2},
+    {size_label: 'L', stock_quantity: 10, is_available: true, sort_order: 3},
+    {size_label: 'XL', stock_quantity: 6, is_available: true, sort_order: 4},
+    {size_label: 'XXL', stock_quantity: 3, is_available: true, sort_order: 5},
+  ],
+  accessories: [
+    {size_label: 'One Size', stock_quantity: 10, is_available: true, sort_order: 1},
+  ],
+};
 
-function createEmptyDraft(): SaveProductInput {
+function createEmptyDraft(section: ProductSection = 'shoes'): SaveProductInput {
   return {
     name: '',
     brand: '',
+    product_section: section,
     category_id: null,
     description: '',
-    regular_price: 3999,
+    regular_price: section === 'shoes' ? 3999 : section === 'jerseys' ? 2199 : 1499,
     discounted_price: null,
     image_url: '',
     gallery_urls: [],
@@ -55,16 +73,17 @@ function createEmptyDraft(): SaveProductInput {
     is_best_seller: false,
     is_special_offer: false,
     offer_label: '',
-    sizes: DEFAULT_UK_SIZES.map((s) => ({...s})),
+    sizes: DEFAULT_SIZES_BY_SECTION[section].map((s) => ({...s})),
   };
 }
 
 export const AdminProducts: React.FC = () => {
   const {allProducts, refreshStore} = useStoreData();
+  const [sectionFilter, setSectionFilter] = useState<'all' | ProductSection>('all');
   const [search, setSearch] = useState('');
   const [brandFilter, setBrandFilter] = useState('all');
   const [editorOpen, setEditorOpen] = useState(false);
-  const [draft, setDraft] = useState<SaveProductInput>(() => createEmptyDraft());
+  const [draft, setDraft] = useState<SaveProductInput>(() => createEmptyDraft('shoes'));
   const [newSizeInput, setNewSizeInput] = useState('');
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
@@ -76,8 +95,8 @@ export const AdminProducts: React.FC = () => {
 
   const uploading = uploadProgress !== null;
 
-  const openCreateModal = () => {
-    setDraft(createEmptyDraft());
+  const openCreateModal = (section: ProductSection = 'shoes') => {
+    setDraft(createEmptyDraft(section));
     setImageUrlInput('');
     setMessage(null);
     setPhotoMessage(null);
@@ -92,6 +111,7 @@ export const AdminProducts: React.FC = () => {
       id: product.id,
       name: product.name,
       brand: product.brand,
+      product_section: product.product_section || 'shoes',
       category_id: product.category_id,
       description: product.description,
       regular_price: product.regular_price,
@@ -116,6 +136,26 @@ export const AdminProducts: React.FC = () => {
     setMessage(null);
     setPhotoMessage(null);
     setEditorOpen(true);
+  };
+
+  const handleDraftSectionChange = (nextSection: ProductSection) => {
+    setDraft((prev) => {
+      if (prev.id) {
+        return {...prev, product_section: nextSection};
+      }
+      const prevDefaults = DEFAULT_SIZES_BY_SECTION[prev.product_section]
+        .map((s) => s.size_label)
+        .join('|');
+      const currentLabels = prev.sizes.map((s) => s.size_label).join('|');
+      const shouldSwapSizes = currentLabels === prevDefaults || prev.sizes.length === 0;
+      return {
+        ...prev,
+        product_section: nextSection,
+        sizes: shouldSwapSizes
+          ? DEFAULT_SIZES_BY_SECTION[nextSection].map((s) => ({...s}))
+          : prev.sizes,
+      };
+    });
   };
 
   const uploadBatchFiles = async (fileList: FileList | File[]) => {
@@ -272,7 +312,7 @@ export const AdminProducts: React.FC = () => {
       return;
     }
     if (draft.sizes.length === 0) {
-      setMessage({type: 'error', text: 'Add at least one shoe size with stock count.'});
+      setMessage({type: 'error', text: 'Add at least one size or option with stock count.'});
       return;
     }
 
@@ -281,7 +321,7 @@ export const AdminProducts: React.FC = () => {
       await saveProduct(draft);
       await refreshStore(true);
       setEditorOpen(false);
-      setMessage({type: 'success', text: `Saved "${draft.name}" to database.`});
+      setMessage({type: 'success', text: `Saved "${draft.name}" to catalog.`});
     } catch (err) {
       setMessage({type: 'error', text: err instanceof Error ? err.message : 'Unable to save product.'});
     } finally {
@@ -309,6 +349,12 @@ export const AdminProducts: React.FC = () => {
     }
   };
 
+  const sectionCounts: Record<ProductSection, number> = {
+    shoes: allProducts.filter((p) => (p.product_section || 'shoes') === 'shoes').length,
+    jerseys: allProducts.filter((p) => p.product_section === 'jerseys').length,
+    accessories: allProducts.filter((p) => p.product_section === 'accessories').length,
+  };
+
   const availableBrands = Array.from(
     new Map(
       allProducts
@@ -318,34 +364,42 @@ export const AdminProducts: React.FC = () => {
     ).values()
   ).sort((a, b) => a.localeCompare(b));
 
-  const filtered = allProducts.filter((p) => {
+  const matchesFilters = (p: Product) => {
     if (brandFilter !== 'all' && p.brand.trim().toLowerCase() !== brandFilter.toLowerCase()) {
       return false;
     }
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q);
-  });
+  };
 
+  const visibleSections =
+    sectionFilter === 'all' ? PRODUCT_SECTION_LIST : [PRODUCT_SECTION_MAP[sectionFilter]];
+
+  const draftSectionMeta = PRODUCT_SECTION_MAP[draft.product_section];
   const liveDiscountPct = computeDiscountPercentage(draft.regular_price, draft.discounted_price);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-2xl font-extrabold text-[#1F2225]">Football Boots &amp; Cleats</h2>
+          <h2 className="font-display text-2xl font-extrabold text-[#1F2225]">Store Catalog</h2>
           <p className="text-sm text-[#3C4044]/80">
-            Add, edit, price, upload multiple photos, and manage visibility for all football shoes, boots, and cleats.
+            Separate catalog sections for Shoes, Football Jerseys, and Accessories.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={openCreateModal}
+          onClick={() => openCreateModal(sectionFilter === 'all' ? 'shoes' : sectionFilter)}
           className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[42px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] font-semibold text-sm rounded-md transition-colors cursor-pointer self-start"
         >
           <Plus className="w-4 h-4" />
-          <span>Add New Cleat / Boot</span>
+          <span>
+            {sectionFilter === 'all'
+              ? 'Add New Product'
+              : `Add ${PRODUCT_SECTION_MAP[sectionFilter].singular}`}
+          </span>
         </button>
       </div>
 
@@ -361,136 +415,217 @@ export const AdminProducts: React.FC = () => {
         </div>
       )}
 
-      {/* Search & Brand Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative max-w-sm w-full">
-          <Search className="w-4 h-4 text-[#3C4044]/60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search cleats or boots by name or brand…"
-            className="w-full pl-9 pr-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225]"
-          />
+      {/* Section Tabs + Search & Brand Filter */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Catalog sections">
+          <button
+            type="button"
+            onClick={() => setSectionFilter('all')}
+            className={`px-3.5 py-2 min-h-[38px] text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+              sectionFilter === 'all'
+                ? 'bg-[#3C4044] text-[#F7F6F5]'
+                : 'bg-[#F7F6F5] border border-[#3C4044]/20 text-[#3C4044] hover:border-[#3C4044]/45'
+            }`}
+          >
+            All Sections ({allProducts.length})
+          </button>
+          {PRODUCT_SECTION_LIST.map((sec) => (
+            <button
+              key={sec.key}
+              type="button"
+              onClick={() => setSectionFilter(sec.key)}
+              className={`px-3.5 py-2 min-h-[38px] text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                sectionFilter === sec.key
+                  ? 'bg-[#3C4044] text-[#F7F6F5]'
+                  : 'bg-[#F7F6F5] border border-[#3C4044]/20 text-[#3C4044] hover:border-[#3C4044]/45'
+              }`}
+            >
+              {sec.label} ({sectionCounts[sec.key]})
+            </button>
+          ))}
         </div>
 
-        <select
-          value={brandFilter}
-          onChange={(e) => setBrandFilter(e.target.value)}
-          aria-label="Filter products by brand"
-          className="px-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225] sm:w-52"
-        >
-          <option value="all">All Brands ({allProducts.length})</option>
-          {availableBrands.map((brand) => (
-            <option key={brand} value={brand}>
-              {brand}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative max-w-sm w-full">
+            <Search className="w-4 h-4 text-[#3C4044]/60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search shoes, jerseys, accessories…"
+              className="w-full pl-9 pr-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225]"
+            />
+          </div>
+
+          <select
+            value={brandFilter}
+            onChange={(e) => setBrandFilter(e.target.value)}
+            aria-label="Filter products by brand"
+            className="px-3 py-2 min-h-[40px] bg-[#F7F6F5] border border-[#3C4044]/20 rounded-md text-sm text-[#1F2225] sm:w-52"
+          >
+            <option value="all">All Brands ({allProducts.length})</option>
+            {availableBrands.map((brand) => (
+              <option key={brand} value={brand}>
+                {brand}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Products Table */}
-      <div className="bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#E9E8E6] text-[#3C4044]">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Cleat / Boot</th>
-                <th className="px-4 py-3 font-semibold text-right">Price</th>
-                <th className="px-4 py-3 font-semibold text-right">Total Stock</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#3C4044]/10">
-              {filtered.map((product) => {
-                const effective = getEffectivePrice(product);
-                const totalStock = getTotalProductStock(product.sizes);
-                return (
-                  <tr key={product.id} className="hover:bg-[#DDDCDB]/25">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-14 h-11 rounded-sm overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
-                          <ResilientImage src={product.image_url} alt={product.name} />
-                          {(product.gallery_urls?.length || 0) > 1 && (
-                            <span className="absolute bottom-0.5 right-0.5 bg-[#1F2225]/85 text-[#F7F6F5] font-mono-num text-[10px] leading-none px-1 py-0.5 rounded-sm">
-                              +{product.gallery_urls.length - 1}
-                            </span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[#1F2225] truncate max-w-[220px]">{product.name}</p>
-                          <p className="text-[#3C4044]/70">
-                            {product.brand}
-                            {(product.gallery_urls?.length || 0) > 1 && (
-                              <span className="ml-1.5 text-[#3C4044]/60">
-                                · {product.gallery_urls.length} photos
+      {/* Dedicated Catalog Sections */}
+      <div className="space-y-6">
+        {visibleSections.map((sec) => {
+          const sectionItems = allProducts
+            .filter((p) => (p.product_section || 'shoes') === sec.key)
+            .filter(matchesFilters);
+
+          return (
+            <section
+              key={sec.key}
+              aria-label={`${sec.label} catalog`}
+              className="bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl overflow-hidden"
+            >
+              <div className="px-5 py-4 bg-[#E9E8E6]/70 border-b border-[#3C4044]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="font-display text-base font-bold text-[#1F2225]">{sec.fullTitle}</h3>
+                    <span className="font-mono-num text-xs font-semibold bg-[#DDDCDB] text-[#3C4044] px-2 py-0.5 rounded-sm">
+                      {sectionItems.length}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#3C4044]/75 mt-0.5">{sec.description}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => openCreateModal(sec.key)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[36px] bg-[#FD7B41] hover:bg-[#fc6b2b] text-[#1F2225] font-semibold text-xs rounded-md transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add {sec.singular}</span>
+                </button>
+              </div>
+
+              {sectionItems.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#3C4044]/70">
+                  No items in {sec.label} match your current search or brand filter.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#E9E8E6] text-[#3C4044]">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">{sec.singular}</th>
+                        <th className="px-4 py-3 font-semibold text-right">Price</th>
+                        <th className="px-4 py-3 font-semibold text-right">Total Stock</th>
+                        <th className="px-4 py-3 font-semibold">Status</th>
+                        <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#3C4044]/10">
+                      {sectionItems.map((product) => {
+                        const effective = getEffectivePrice(product);
+                        const totalStock = getTotalProductStock(product.sizes);
+                        return (
+                          <tr key={product.id} className="hover:bg-[#DDDCDB]/25">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="relative w-14 h-11 rounded-sm overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
+                                  <ResilientImage src={product.image_url} alt={product.name} />
+                                  {(product.gallery_urls?.length || 0) > 1 && (
+                                    <span className="absolute bottom-0.5 right-0.5 bg-[#1F2225]/85 text-[#F7F6F5] font-mono-num text-[10px] leading-none px-1 py-0.5 rounded-sm">
+                                      +{product.gallery_urls.length - 1}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-[#1F2225] truncate max-w-[240px]">
+                                    {product.name}
+                                  </p>
+                                  <p className="text-[#3C4044]/70">
+                                    {product.brand}
+                                    {(product.gallery_urls?.length || 0) > 1 && (
+                                      <span className="ml-1.5 text-[#3C4044]/60">
+                                        · {product.gallery_urls.length} photos
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono-num">
+                              <span className="font-semibold text-[#1F2225]">{formatCurrency(effective)}</span>
+                              {effective < product.regular_price && (
+                                <span className="block text-[11px] text-[#3C4044]/55 line-through">
+                                  {formatCurrency(product.regular_price)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono-num font-semibold text-[#1F2225]">
+                              {totalStock} {sec.unit}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={
+                                  product.is_active ? 'text-emerald-700 font-semibold' : 'text-[#3C4044]/60'
+                                }
+                              >
+                                {product.is_active ? 'Active' : 'Hidden'}
                               </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono-num">
-                      <span className="font-semibold text-[#1F2225]">{formatCurrency(effective)}</span>
-                      {effective < product.regular_price && (
-                        <span className="block text-[11px] text-[#3C4044]/55 line-through">
-                          {formatCurrency(product.regular_price)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono-num font-semibold text-[#1F2225]">
-                      {totalStock} pairs
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={product.is_active ? 'text-emerald-700 font-semibold' : 'text-[#3C4044]/60'}>
-                        {product.is_active ? 'Active' : 'Hidden'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => void handleToggleActive(product)}
-                          title={product.is_active ? 'Hide from storefront' : 'Activate on storefront'}
-                          className="p-2 rounded-sm hover:bg-[#DDDCDB] text-[#3C4044] cursor-pointer"
-                        >
-                          {product.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(product)}
-                          title="Edit product"
-                          className="p-2 rounded-sm hover:bg-[#DDDCDB] text-[#3C4044] cursor-pointer"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        {confirmDeleteId === product.id ? (
-                          <button
-                            type="button"
-                            onClick={() => void handleDelete(product.id)}
-                            className="px-2 py-1 bg-red-700 text-white rounded-sm text-[11px] font-semibold cursor-pointer"
-                          >
-                            Confirm
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(product.id)}
-                            title="Delete product"
-                            className="p-2 rounded-sm hover:bg-red-100 text-red-700 cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleToggleActive(product)}
+                                  title={product.is_active ? 'Hide from storefront' : 'Activate on storefront'}
+                                  className="p-2 rounded-sm hover:bg-[#DDDCDB] text-[#3C4044] cursor-pointer"
+                                >
+                                  {product.is_active ? (
+                                    <Eye className="w-4 h-4" />
+                                  ) : (
+                                    <EyeOff className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openEditModal(product)}
+                                  title="Edit product"
+                                  className="p-2 rounded-sm hover:bg-[#DDDCDB] text-[#3C4044] cursor-pointer"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                                {confirmDeleteId === product.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleDelete(product.id)}
+                                    className="px-2 py-1 bg-red-700 text-white rounded-sm text-[11px] font-semibold cursor-pointer"
+                                  >
+                                    Confirm
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(product.id)}
+                                    title="Delete product"
+                                    className="p-2 rounded-sm hover:bg-red-100 text-red-700 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
 
       {/* Product Create / Edit Drawer Modal */}
@@ -499,7 +634,7 @@ export const AdminProducts: React.FC = () => {
           <div className="bg-[#F7F6F5] border border-[#3C4044]/20 rounded-xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 z-10 bg-[#DDDCDB] px-6 py-4 border-b border-[#3C4044]/15 flex items-center justify-between">
               <h3 className="font-display text-lg font-bold text-[#1F2225]">
-                {draft.id ? 'Edit Football Boot / Cleat' : 'Add New Football Boot / Cleat'}
+                {draft.id ? `Edit ${draftSectionMeta.singular}` : `Add New ${draftSectionMeta.singular}`}
               </h3>
               <button
                 type="button"
@@ -512,6 +647,30 @@ export const AdminProducts: React.FC = () => {
             </div>
 
             <form onSubmit={handleSave} className="p-6 space-y-6">
+              {/* Catalog Section Selector */}
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-[#3C4044]">Catalog Section *</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PRODUCT_SECTION_LIST.map((sec) => {
+                    const active = draft.product_section === sec.key;
+                    return (
+                      <button
+                        key={sec.key}
+                        type="button"
+                        onClick={() => handleDraftSectionChange(sec.key)}
+                        className={`px-3 py-2.5 text-xs font-semibold rounded-md border transition-colors cursor-pointer ${
+                          active
+                            ? 'bg-[#3C4044] border-[#3C4044] text-[#F7F6F5]'
+                            : 'bg-white border-[#3C4044]/20 text-[#3C4044] hover:border-[#FD7B41]'
+                        }`}
+                      >
+                        {sec.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Multi-Photo Upload & Gallery Manager */}
               <div
                 onDragOver={(e) => {
@@ -678,13 +837,21 @@ export const AdminProducts: React.FC = () => {
               {/* Basic Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-[#3C4044]">Cleat / Boot Name *</label>
+                  <label className="block text-xs font-semibold text-[#3C4044]">
+                    {draftSectionMeta.singular} Name *
+                  </label>
                   <input
                     type="text"
                     required
                     value={draft.name}
                     onChange={(e) => setDraft({...draft, name: e.target.value})}
-                    placeholder="e.g. Mercurial Vapor Pro FG Cleats"
+                    placeholder={
+                      draft.product_section === 'jerseys'
+                        ? 'e.g. Crimson Home Matchday Jersey'
+                        : draft.product_section === 'accessories'
+                          ? 'e.g. Pro Flight Match Ball'
+                          : 'e.g. Mercurial Vapor Pro FG Cleats'
+                    }
                     className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
                   />
                 </div>
@@ -708,7 +875,13 @@ export const AdminProducts: React.FC = () => {
                   rows={3}
                   value={draft.description}
                   onChange={(e) => setDraft({...draft, description: e.target.value})}
-                  placeholder="Upper material, stud plate (FG/TF/AG/IC), fit profile, and pitch usage…"
+                  placeholder={
+                    draft.product_section === 'jerseys'
+                      ? 'Fabric weave, breathability, player/fan fit, and matchday details…'
+                      : draft.product_section === 'accessories'
+                        ? 'Material build, grip/impact protection, and pitch usage…'
+                        : 'Upper material, stud plate (FG/TF/AG/IC), fit profile, and pitch usage…'
+                  }
                   className="w-full px-3.5 py-2 bg-white border border-[#3C4044]/25 rounded-md text-sm"
                 />
               </div>
@@ -809,14 +982,20 @@ export const AdminProducts: React.FC = () => {
               <div className="space-y-3 pt-3 border-t border-[#3C4044]/15">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <h4 className="font-display text-sm font-bold text-[#1F2225]">
-                    Size-Level Stock Matrix
+                    Size / Variant Stock Matrix
                   </h4>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={newSizeInput}
                       onChange={(e) => setNewSizeInput(e.target.value)}
-                      placeholder="e.g. UK 11"
+                      placeholder={
+                        draft.product_section === 'jerseys'
+                          ? 'e.g. XXL'
+                          : draft.product_section === 'accessories'
+                            ? 'e.g. Size 5'
+                            : 'e.g. UK 11'
+                      }
                       className="px-3 py-1.5 bg-white border border-[#3C4044]/25 rounded-md text-xs w-28"
                     />
                     <button

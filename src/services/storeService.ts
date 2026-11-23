@@ -6,21 +6,65 @@ import {
   OrderPlacementResult,
   OrderStatus,
   Product,
+  ProductSection,
   ProductSize,
   StoreSettings,
 } from '../types';
-import {computeDiscountPercentage, getEffectivePrice, slugify} from '../utils/formatters';
+import {
+  computeDiscountPercentage,
+  getEffectivePrice,
+  normalizeProductSection,
+  slugify,
+} from '../utils/formatters';
 import {blobToDataUrl, optimizeProductImage} from '../utils/imageOptimizer';
 import {DEFAULT_STORE_SETTINGS, INITIAL_CATEGORIES, INITIAL_ORDERS, INITIAL_PRODUCTS} from './seedData';
 import {isSupabaseConfigured, supabase} from './supabaseClient';
 import {buildWhatsAppOrderMessage, buildWhatsAppUrl} from './whatsappService';
 
 const STORAGE_KEYS = {
-  products: 'cleatsdhub_preview_products_v4',
-  categories: 'cleatsdhub_preview_categories_v3',
+  products: 'cleatsdhub_preview_products_v5',
+  categories: 'cleatsdhub_preview_categories_v4',
   orders: 'cleatsdhub_preview_orders_v3',
   settings: 'cleatsdhub_preview_settings_v4',
 };
+
+const SECTION_CATEGORY_META: Record<
+  ProductSection,
+  {slug: string; name: string; description: string; display_order: number}
+> = {
+  shoes: {
+    slug: 'section-shoes',
+    name: 'Football Shoes',
+    description: 'Football shoes, boots, and cleats.',
+    display_order: 1,
+  },
+  jerseys: {
+    slug: 'section-jerseys',
+    name: 'Football Jerseys',
+    description: 'Matchday home, away, and training football jerseys.',
+    display_order: 6,
+  },
+  accessories: {
+    slug: 'section-accessories',
+    name: 'Football Accessories',
+    description: 'Match footballs, shin guards, and goalkeeper gloves.',
+    display_order: 7,
+  },
+};
+
+function resolveProductSectionFromFields(
+  explicitSection: unknown,
+  categorySlug?: string | null,
+  categoryName?: string | null
+): ProductSection {
+  if (typeof explicitSection === 'string' && explicitSection.trim()) {
+    return normalizeProductSection(explicitSection);
+  }
+  const combined = `${categorySlug || ''} ${categoryName || ''}`.trim().toLowerCase();
+  if (combined.includes('jersey')) return 'jerseys';
+  if (combined.includes('accessor')) return 'accessories';
+  return 'shoes';
+}
 
 const LEGACY_HERO_PATH = '/assets/aistudio/download_6a122e79.jpg';
 
@@ -247,7 +291,14 @@ export async function upsertCategory(category: Partial<Category> & {name: string
 // =============================================================================
 export async function fetchProducts(includeInactive = false): Promise<Product[]> {
   if (!isSupabaseConfigured || !supabase) {
-    const all = readLocal<Product[]>(STORAGE_KEYS.products, INITIAL_PRODUCTS);
+    const all = readLocal<Product[]>(STORAGE_KEYS.products, INITIAL_PRODUCTS).map((p) => ({
+      ...p,
+      product_section: resolveProductSectionFromFields(
+        p.product_section,
+        p.category_slug,
+        p.category_name
+      ),
+    }));
     return includeInactive ? all : all.filter((p) => p.is_active);
   }
 
@@ -281,13 +332,19 @@ export async function fetchProducts(includeInactive = false): Promise<Product[]>
     const normalizedGallery = Array.from(
       new Set(primaryUrl ? [primaryUrl, ...rawGallery] : rawGallery)
     );
+    const productSection = resolveProductSectionFromFields(
+      row.product_section,
+      cat?.slug,
+      cat?.name
+    );
     return {
       ...(row as unknown as Product),
+      product_section: productSection,
       regular_price: Number(row.regular_price),
       discounted_price: row.discounted_price !== null ? Number(row.discounted_price) : null,
       discount_percentage: Number(row.discount_percentage ?? 0),
-      category_name: cat?.name || 'Football Cleats',
-      category_slug: cat?.slug || '',
+      category_name: cat?.name || SECTION_CATEGORY_META[productSection].name,
+      category_slug: cat?.slug || SECTION_CATEGORY_META[productSection].slug,
       image_url: normalizedGallery[0] || primaryUrl,
       gallery_urls: normalizedGallery,
       sizes: [...rawSizes].sort((a, b) => a.sort_order - b.sort_order),
@@ -295,10 +352,67 @@ export async function fetchProducts(includeInactive = false): Promise<Product[]>
   });
 }
 
+async function resolveSectionCategoryId(
+  section: ProductSection,
+  currentCategoryId: string | null
+): Promise<string | null> {
+  if (!isSupabaseConfigured || !supabase) {
+    if (section === 'shoes' && currentCategoryId) return currentCategoryId;
+    const categories = readLocal<Category[]>(STORAGE_KEYS.categories, INITIAL_CATEGORIES);
+    const meta = SECTION_CATEGORY_META[section];
+    const match = categories.find((c) => c.slug === meta.slug);
+    return match?.id || currentCategoryId || null;
+  }
+
+  if (section === 'shoes' && currentCategoryId) {
+    // Keep existing shoe soleplate category unless it pointed to jerseys/accessories
+    const {data: currentCat} = await supabase
+      .from('categories')
+      .select('id, slug')
+      .eq('id', currentCategoryId)
+      .maybeSingle();
+    if (
+      currentCat &&
+      currentCat.slug !== SECTION_CATEGORY_META.jerseys.slug &&
+      currentCat.slug !== SECTION_CATEGORY_META.accessories.slug
+    ) {
+      return currentCategoryId;
+    }
+  }
+
+  const meta = SECTION_CATEGORY_META[section];
+  const {data: existing} = await supabase
+    .from('categories')
+    .select('id')
+    .eq('slug', meta.slug)
+    .maybeSingle();
+
+  if (existing?.id) {
+    return existing.id;
+  }
+
+  const {data: created, error: createError} = await supabase
+    .from('categories')
+    .insert({
+      name: meta.name,
+      slug: meta.slug,
+      description: meta.description,
+      display_order: meta.display_order,
+    })
+    .select('id')
+    .single();
+
+  if (createError) {
+    return currentCategoryId || null;
+  }
+  return created?.id || null;
+}
+
 export interface SaveProductInput {
   id?: string;
   name: string;
   brand: string;
+  product_section: ProductSection;
   category_id: string | null;
   description: string;
   regular_price: number;
@@ -321,6 +435,7 @@ export interface SaveProductInput {
 }
 
 export async function saveProduct(input: SaveProductInput): Promise<Product> {
+  const section = normalizeProductSection(input.product_section);
   const regularPrice = Math.max(0, Number(input.regular_price));
   const discountedPrice =
     input.discounted_price !== null && input.discounted_price > 0 && input.discounted_price < regularPrice
@@ -348,7 +463,8 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
   if (!isSupabaseConfigured || !supabase) {
     const products = readLocal<Product[]>(STORAGE_KEYS.products, INITIAL_PRODUCTS);
     const categories = readLocal<Category[]>(STORAGE_KEYS.categories, INITIAL_CATEGORIES);
-    const cat = categories.find((c) => c.id === input.category_id);
+    const resolvedCatId = await resolveSectionCategoryId(section, input.category_id);
+    const cat = categories.find((c) => c.id === resolvedCatId);
     const now = new Date().toISOString();
 
     if (input.id) {
@@ -366,9 +482,10 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
           ...p,
           name: input.name.trim(),
           brand: input.brand.trim(),
-          category_id: input.category_id,
-          category_name: cat?.name || 'Football Cleats',
-          category_slug: cat?.slug || '',
+          product_section: section,
+          category_id: resolvedCatId,
+          category_name: cat?.name || SECTION_CATEGORY_META[section].name,
+          category_slug: cat?.slug || SECTION_CATEGORY_META[section].slug,
           description: input.description.trim(),
           regular_price: regularPrice,
           discounted_price: discountedPrice,
@@ -396,9 +513,10 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
       name: input.name.trim(),
       slug: uniqueSlug,
       brand: input.brand.trim(),
-      category_id: input.category_id,
-      category_name: cat?.name || 'Football Cleats',
-      category_slug: cat?.slug || '',
+      product_section: section,
+      category_id: resolvedCatId,
+      category_name: cat?.name || SECTION_CATEGORY_META[section].name,
+      category_slug: cat?.slug || SECTION_CATEGORY_META[section].slug,
       description: input.description.trim(),
       regular_price: regularPrice,
       discounted_price: discountedPrice,
@@ -426,11 +544,12 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
     return newProduct;
   }
 
-  // Real Supabase mutation
-  const productPayload = {
+  // Real Supabase mutation (persists product_section + backing category_id for live schema compatibility)
+  const resolvedCategoryId = await resolveSectionCategoryId(section, input.category_id);
+  const basePayload = {
     name: input.name.trim(),
     brand: input.brand.trim(),
-    category_id: input.category_id || null,
+    category_id: resolvedCategoryId,
     description: input.description.trim(),
     regular_price: regularPrice,
     discounted_price: discountedPrice,
@@ -445,19 +564,37 @@ export async function saveProduct(input: SaveProductInput): Promise<Product> {
     offer_label: input.offer_label.trim(),
   };
 
+  const payloadWithSection = {
+    ...basePayload,
+    product_section: section,
+  };
+
   let productId = input.id;
   if (productId) {
-    const {error} = await supabase.from('products').update(productPayload).eq('id', productId);
+    let {error} = await supabase.from('products').update(payloadWithSection).eq('id', productId);
+    if (error && error.message.toLowerCase().includes('product_section')) {
+      const retry = await supabase.from('products').update(basePayload).eq('id', productId);
+      error = retry.error;
+    }
     if (error) throw new Error(`Failed to update product: ${error.message}`);
   } else {
     const uniqueSlug = `${slugify(input.name)}-${Date.now().toString(36).slice(-4)}`;
-    const {data, error} = await supabase
+    let res = await supabase
       .from('products')
-      .insert({...productPayload, slug: uniqueSlug})
+      .insert({...payloadWithSection, slug: uniqueSlug})
       .select('id')
       .single();
-    if (error) throw new Error(`Failed to create product: ${error.message}`);
-    productId = data.id;
+    if (res.error && res.error.message.toLowerCase().includes('product_section')) {
+      res = await supabase
+        .from('products')
+        .insert({...basePayload, slug: uniqueSlug})
+        .select('id')
+        .single();
+    }
+    if (res.error || !res.data) {
+      throw new Error(`Failed to create product: ${res.error?.message || 'Unknown error'}`);
+    }
+    productId = res.data.id;
   }
 
   // Sync sizes cleanly

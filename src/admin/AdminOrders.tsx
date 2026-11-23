@@ -199,7 +199,7 @@ export const AdminOrders: React.FC<AdminOrdersProps> = ({orders, loading, onRefr
                       <table className="w-full text-left">
                         <thead className="border-b border-[#3C4044]/15 text-[#3C4044]/80">
                           <tr>
-                            <th className="py-2 font-semibold">Boot / Cleat</th>
+                            <th className="py-2 font-semibold">Product</th>
                             <th className="py-2 font-semibold">Size</th>
                             <th className="py-2 font-semibold text-right">Qty</th>
                             <th className="py-2 font-semibold text-right">Unit Price</th>

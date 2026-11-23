@@ -21,6 +21,7 @@ create table if not exists public.products (
   name text not null,
   slug text not null unique,
   brand text not null,
+  product_section text not null default 'shoes' check (product_section in ('shoes', 'jerseys', 'accessories')),
   category_id uuid references public.categories(id) on delete set null,
   description text not null default '',
   regular_price numeric(10, 2) not null check (regular_price >= 0),
@@ -38,6 +39,7 @@ create table if not exists public.products (
   updated_at timestamptz not null default now()
 );
 
+create index if not exists idx_products_section on public.products(product_section);
 create index if not exists idx_products_category on public.products(category_id);
 create index if not exists idx_products_active on public.products(is_active);
 create index if not exists idx_products_created on public.products(created_at desc);

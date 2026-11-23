@@ -7,6 +7,7 @@ import {
   formatCurrency,
   getAvailableSizes,
   getEffectivePrice,
+  getProductSectionLabel,
   getSortedSizes,
   getTotalProductStock,
 } from '../utils/formatters';
@@ -122,7 +123,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({product}) => {
         <div className="space-y-2">
           {/* Clean Unboxed Metadata */}
           <div className="flex items-center justify-between gap-2 text-xs text-[#3C4044]/70">
-            <span className="truncate">{product.brand}</span>
+            <span className="truncate">
+              {product.brand} · {getProductSectionLabel(product.product_section)}
+            </span>
             <span
               className={`font-medium shrink-0 ${
                 isOutOfStock ? 'text-red-700' : 'text-[#3C4044]'

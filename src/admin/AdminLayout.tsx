@@ -15,7 +15,7 @@ import {Link} from 'react-router-dom';
 import {useAuth} from '../hooks/useAuth';
 import {useStoreData} from '../hooks/useStoreData';
 import {fetchOrders} from '../services/storeService';
-import {Order} from '../types';
+import {Order, ProductSection} from '../types';
 import {AdminInventory} from './AdminInventory';
 import {AdminOffers} from './AdminOffers';
 import {AdminOrders} from './AdminOrders';
@@ -24,11 +24,13 @@ import {AdminProducts} from './AdminProducts';
 import {AdminSettings} from './AdminSettings';
 
 export type AdminSection = 'overview' | 'products' | 'inventory' | 'offers' | 'orders' | 'settings';
+export type CatalogSectionFilter = 'all' | ProductSection;
 
 export const AdminLayout: React.FC = () => {
   const {admin, signOut, isPreviewMode} = useAuth();
-  const {settings, refreshStore} = useStoreData();
+  const {settings, allProducts, refreshStore} = useStoreData();
   const [activeSection, setActiveSection] = useState<AdminSection>('overview');
+  const [catalogSection, setCatalogSection] = useState<CatalogSectionFilter>('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -50,14 +52,42 @@ export const AdminLayout: React.FC = () => {
 
   const navItems: Array<{key: AdminSection; label: string; icon: React.ReactNode}> = [
     {key: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" />},
-    {key: 'products', label: 'Products', icon: <Package className="w-4 h-4" />},
+    {key: 'products', label: 'Catalog', icon: <Package className="w-4 h-4" />},
     {key: 'inventory', label: 'Size & Stock', icon: <Layers className="w-4 h-4" />},
     {key: 'offers', label: 'Discounts & Offers', icon: <Tag className="w-4 h-4" />},
     {key: 'orders', label: 'Orders', icon: <ClipboardList className="w-4 h-4" />},
     {key: 'settings', label: 'Store Settings', icon: <Settings className="w-4 h-4" />},
   ];
 
-  const currentTitle = navItems.find((i) => i.key === activeSection)?.label || 'Overview';
+  const catalogSubItems: Array<{key: CatalogSectionFilter; label: string; count: number}> = [
+    {key: 'all', label: 'All Items', count: allProducts.length},
+    {
+      key: 'shoes',
+      label: 'Shoes',
+      count: allProducts.filter((p) => p.product_section === 'shoes').length,
+    },
+    {
+      key: 'jerseys',
+      label: 'Football Jerseys',
+      count: allProducts.filter((p) => p.product_section === 'jerseys').length,
+    },
+    {
+      key: 'accessories',
+      label: 'Accessories',
+      count: allProducts.filter((p) => p.product_section === 'accessories').length,
+    },
+  ];
+
+  const currentTitle =
+    activeSection === 'products'
+      ? catalogSection === 'shoes'
+        ? 'Catalog · Shoes'
+        : catalogSection === 'jerseys'
+          ? 'Catalog · Football Jerseys'
+          : catalogSection === 'accessories'
+            ? 'Catalog · Accessories'
+            : 'Catalog · All Items'
+      : navItems.find((i) => i.key === activeSection)?.label || 'Overview';
 
   return (
     <div className="min-h-screen bg-[#DDDCDB] text-[#3C4044] flex">
@@ -98,22 +128,53 @@ export const AdminLayout: React.FC = () => {
             {navItems.map((item) => {
               const active = activeSection === item.key;
               return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => {
-                    setActiveSection(item.key);
-                    setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[42px] text-sm font-medium rounded-md transition-colors cursor-pointer ${
-                    active
-                      ? 'bg-[#FD7B41] text-[#1F2225] font-semibold'
-                      : 'text-[#DDDCDB]/85 hover:bg-[#F7F6F5]/10 hover:text-white'
-                  }`}
-                >
-                  {item.icon}
-                  <span className="truncate">{item.label}</span>
-                </button>
+                <div key={item.key} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSection(item.key);
+                      if (item.key === 'products' && !catalogSection) {
+                        setCatalogSection('all');
+                      }
+                      setSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[42px] text-sm font-medium rounded-md transition-colors cursor-pointer ${
+                      active
+                        ? 'bg-[#FD7B41] text-[#1F2225] font-semibold'
+                        : 'text-[#DDDCDB]/85 hover:bg-[#F7F6F5]/10 hover:text-white'
+                    }`}
+                  >
+                    {item.icon}
+                    <span className="truncate">{item.label}</span>
+                  </button>
+
+                  {item.key === 'products' && (
+                    <div className="pl-7 pr-1 py-1 space-y-0.5">
+                      {catalogSubItems.map((sub) => {
+                        const subActive = activeSection === 'products' && catalogSection === sub.key;
+                        return (
+                          <button
+                            key={sub.key}
+                            type="button"
+                            onClick={() => {
+                              setActiveSection('products');
+                              setCatalogSection(sub.key);
+                              setSidebarOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs rounded-md transition-colors cursor-pointer ${
+                              subActive
+                                ? 'bg-[#F7F6F5]/15 text-[#EDBF9B] font-semibold'
+                                : 'text-[#DDDCDB]/75 hover:bg-[#F7F6F5]/10 hover:text-white'
+                            }`}
+                          >
+                            <span className="truncate">{sub.label}</span>
+                            <span className="font-mono-num text-[11px] opacity-80">{sub.count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>
@@ -181,7 +242,12 @@ export const AdminLayout: React.FC = () => {
               onRefreshOrders={loadOrders}
             />
           )}
-          {activeSection === 'products' && <AdminProducts />}
+          {activeSection === 'products' && (
+            <AdminProducts
+              activeCatalogSection={catalogSection}
+              onChangeCatalogSection={setCatalogSection}
+            />
+          )}
           {activeSection === 'inventory' && <AdminInventory />}
           {activeSection === 'offers' && <AdminOffers />}
           {activeSection === 'orders' && (

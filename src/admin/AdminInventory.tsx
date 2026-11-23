@@ -2,8 +2,13 @@ import React, {useState} from 'react';
 import {AlertTriangle, Plus, Save, Trash2} from 'lucide-react';
 import {useStoreData} from '../hooks/useStoreData';
 import {updateProductSizes} from '../services/storeService';
-import {Product} from '../types';
-import {getSortedSizes, getTotalProductStock} from '../utils/formatters';
+import {Product, ProductSection} from '../types';
+import {
+  getSortedSizes,
+  getTotalProductStock,
+  PRODUCT_SECTION_LIST,
+  PRODUCT_SECTION_MAP,
+} from '../utils/formatters';
 
 interface EditableSizeRow {
   size_label: string;
@@ -14,11 +19,17 @@ interface EditableSizeRow {
 
 export const AdminInventory: React.FC = () => {
   const {allProducts, refreshStore} = useStoreData();
+  const [sectionFilter, setSectionFilter] = useState<'all' | ProductSection>('all');
   const [selectedProductId, setSelectedProductId] = useState<string>(allProducts[0]?.id || '');
   const [draftSizes, setDraftSizes] = useState<Record<string, EditableSizeRow[]>>({});
   const [newSizeLabel, setNewSizeLabel] = useState('');
   const [savingId, setSavingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{type: 'error' | 'success'; text: string} | null>(null);
+
+  const visibleProducts =
+    sectionFilter === 'all'
+      ? allProducts
+      : allProducts.filter((p) => (p.product_section || 'shoes') === sectionFilter);
 
   const getRows = (product: Product): EditableSizeRow[] => {
     if (draftSizes[product.id]) return draftSizes[product.id];
@@ -54,15 +65,50 @@ export const AdminInventory: React.FC = () => {
     }
   };
 
-  const activeProduct = allProducts.find((p) => p.id === selectedProductId) || allProducts[0];
+  const activeProduct = visibleProducts.find((p) => p.id === selectedProductId) || visibleProducts[0];
+  const activeSectionMeta = activeProduct
+    ? PRODUCT_SECTION_MAP[activeProduct.product_section || 'shoes']
+    : PRODUCT_SECTION_MAP.shoes;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl font-extrabold text-[#1F2225]">Size &amp; Stock Inventory</h2>
         <p className="text-sm text-[#3C4044]/80">
-          Manage individual UK boot sizes, stock quantities, and out-of-stock flags per cleat model.
+          Manage individual sizes, variants, and stock quantities across Shoes, Football Jerseys, and Accessories.
         </p>
+      </div>
+
+      {/* Section Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter inventory by section">
+        <button
+          type="button"
+          onClick={() => setSectionFilter('all')}
+          className={`px-3.5 py-2 min-h-[38px] text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+            sectionFilter === 'all'
+              ? 'bg-[#3C4044] text-[#F7F6F5]'
+              : 'bg-[#F7F6F5] border border-[#3C4044]/20 text-[#3C4044] hover:border-[#3C4044]/45'
+          }`}
+        >
+          All ({allProducts.length})
+        </button>
+        {PRODUCT_SECTION_LIST.map((sec) => {
+          const count = allProducts.filter((p) => (p.product_section || 'shoes') === sec.key).length;
+          return (
+            <button
+              key={sec.key}
+              type="button"
+              onClick={() => setSectionFilter(sec.key)}
+              className={`px-3.5 py-2 min-h-[38px] text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                sectionFilter === sec.key
+                  ? 'bg-[#3C4044] text-[#F7F6F5]'
+                  : 'bg-[#F7F6F5] border border-[#3C4044]/20 text-[#3C4044] hover:border-[#3C4044]/45'
+              }`}
+            >
+              {sec.label} ({count})
+            </button>
+          );
+        })}
       </div>
 
       {feedback && (
@@ -81,12 +127,13 @@ export const AdminInventory: React.FC = () => {
         {/* Left: Product Picker */}
         <div className="lg:col-span-4 bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl overflow-hidden">
           <div className="px-4 py-3 bg-[#E9E8E6] border-b border-[#3C4044]/10 text-xs font-semibold text-[#3C4044]">
-            Select Cleat / Boot ({allProducts.length})
+            Select Product ({visibleProducts.length})
           </div>
           <div className="divide-y divide-[#3C4044]/10 max-h-[520px] overflow-y-auto">
-            {allProducts.map((product) => {
+            {visibleProducts.map((product) => {
               const total = getTotalProductStock(product.sizes);
               const selected = activeProduct?.id === product.id;
+              const secMeta = PRODUCT_SECTION_MAP[product.product_section || 'shoes'];
               return (
                 <button
                   key={product.id}
@@ -101,14 +148,16 @@ export const AdminInventory: React.FC = () => {
                 >
                   <div className="min-w-0">
                     <p className="font-semibold truncate">{product.name}</p>
-                    <p className={selected ? 'text-[#DDDCDB]/80' : 'text-[#3C4044]/70'}>{product.brand}</p>
+                    <p className={selected ? 'text-[#DDDCDB]/80' : 'text-[#3C4044]/70'}>
+                      {product.brand} · {secMeta.label}
+                    </p>
                   </div>
                   <span
                     className={`font-mono-num font-semibold shrink-0 ${
                       total === 0 ? (selected ? 'text-[#EDBF9B]' : 'text-red-700') : ''
                     }`}
                   >
-                    {total} pairs
+                    {total} {secMeta.unit}
                   </span>
                 </button>
               );
@@ -123,7 +172,8 @@ export const AdminInventory: React.FC = () => {
               <div>
                 <h3 className="font-display text-lg font-bold text-[#1F2225]">{activeProduct.name}</h3>
                 <p className="text-xs text-[#3C4044]/75">
-                  {activeProduct.brand} · {activeProduct.sizes.length} configured sizes
+                  {activeProduct.brand} · {activeSectionMeta.label} · {activeProduct.sizes.length}{' '}
+                  configured sizes
                 </p>
               </div>
               <button
@@ -143,8 +193,14 @@ export const AdminInventory: React.FC = () => {
                 type="text"
                 value={newSizeLabel}
                 onChange={(e) => setNewSizeLabel(e.target.value)}
-                placeholder="New size (e.g. UK 11)"
-                className="px-3 py-2 bg-white border border-[#3C4044]/25 rounded-md text-xs w-44"
+                placeholder={
+                  activeProduct.product_section === 'jerseys'
+                    ? 'New size (e.g. XXL)'
+                    : activeProduct.product_section === 'accessories'
+                      ? 'New option (e.g. Size 5)'
+                      : 'New size (e.g. UK 11)'
+                }
+                className="px-3 py-2 bg-white border border-[#3C4044]/25 rounded-md text-xs w-48"
               />
               <button
                 type="button"

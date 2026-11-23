@@ -269,7 +269,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         <div>
           <h2 className="font-display text-2xl font-extrabold text-[#1F2225]">Store Overview</h2>
           <p className="text-sm text-[#3C4044]/80">
-            Live snapshot of your football boots &amp; cleats catalogue, UK size stock health, and WhatsApp order activity.
+            Live snapshot of your shoes, football jerseys, and accessories catalog, stock health, and WhatsApp orders.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5 self-start">
@@ -425,7 +425,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
 
           {lowStockList.length === 0 && outOfStockProducts === 0 ? (
             <div className="p-6 text-sm text-[#3C4044]/75">
-              All active football boot sizes currently have healthy stock levels.
+              All active catalog items currently have healthy stock levels.
             </div>
           ) : (
             <div className="divide-y divide-[#3C4044]/10">

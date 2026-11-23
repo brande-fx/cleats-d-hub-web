@@ -13,18 +13,30 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     {label: 'Home', to: '/'},
-    {label: 'Shop', to: '/shop'},
+    {label: 'Shoes', to: '/shop?section=shoes'},
+    {label: 'Jerseys', to: '/shop?section=jerseys'},
+    {label: 'Accessories', to: '/shop?section=accessories'},
     {label: 'Offers', to: '/shop?offers=true'},
     {label: 'Contact', to: '/#contact'},
   ];
 
+  const searchParams = new URLSearchParams(location.search);
+  const currentSection = searchParams.get('section');
+  const isOffers = searchParams.get('offers') === 'true';
+
   const isActive = (to: string) => {
     if (to === '/') return location.pathname === '/' && !location.hash;
-    if (to.startsWith('/shop?offers=true')) {
-      return location.pathname === '/shop' && location.search.includes('offers=true');
+    if (to === '/shop?offers=true') {
+      return location.pathname === '/shop' && isOffers;
     }
-    if (to === '/shop') {
-      return location.pathname === '/shop' && !location.search.includes('offers=true');
+    if (to === '/shop?section=shoes') {
+      return location.pathname === '/shop' && !isOffers && currentSection === 'shoes';
+    }
+    if (to === '/shop?section=jerseys') {
+      return location.pathname === '/shop' && !isOffers && currentSection === 'jerseys';
+    }
+    if (to === '/shop?section=accessories') {
+      return location.pathname === '/shop' && !isOffers && currentSection === 'accessories';
     }
     return false;
   };

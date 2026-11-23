@@ -9,6 +9,7 @@ import {
   getEffectivePrice,
   getSortedSizes,
   getTotalProductStock,
+  PRODUCT_SECTION_MAP,
 } from '../utils/formatters';
 
 export const ProductDetailsPage: React.FC = () => {
@@ -42,20 +43,22 @@ export const ProductDetailsPage: React.FC = () => {
   if (!product) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center space-y-4">
-        <h1 className="font-display text-2xl font-bold text-[#1F2225]">Cleat not found</h1>
+        <h1 className="font-display text-2xl font-bold text-[#1F2225]">Product not found</h1>
         <p className="text-sm text-[#3C4044]/80">
-          This pair may have been removed or deactivated by the store administrator.
+          This item may have been removed or deactivated by the store administrator.
         </p>
         <Link
           to="/shop"
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#FD7B41] text-[#1F2225] font-semibold text-sm rounded-md"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Cleats</span>
+          <span>Back to Store</span>
         </Link>
       </div>
     );
   }
+
+  const sectionMeta = PRODUCT_SECTION_MAP[product.product_section || 'shoes'];
 
   const gallery = Array.from(
     new Set([product.image_url, ...(product.gallery_urls || [])].filter(Boolean))
@@ -78,7 +81,7 @@ export const ProductDetailsPage: React.FC = () => {
 
   const handleAddToCart = (goToCheckout = false) => {
     if (!selectedSize) {
-      setFeedback({type: 'error', text: 'Please select an available UK boot size before continuing.'});
+      setFeedback({type: 'error', text: 'Please select an available size before continuing.'});
       return;
     }
     const res = addToCart(product, selectedSize, quantity);
@@ -96,9 +99,12 @@ export const ProductDetailsPage: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-[#3C4044]/75">
-        <Link to="/shop" className="inline-flex items-center gap-1.5 hover:text-[#1F2225] font-medium">
+        <Link
+          to={`/shop?section=${sectionMeta.key}`}
+          className="inline-flex items-center gap-1.5 hover:text-[#1F2225] font-medium"
+        >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>All Cleats &amp; Boots</span>
+          <span>{sectionMeta.fullTitle}</span>
         </Link>
         <span aria-hidden="true">/</span>
         <span>{product.brand}</span>
@@ -169,9 +175,13 @@ export const ProductDetailsPage: React.FC = () => {
         <div className="lg:col-span-5 bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl p-6 sm:p-8 space-y-6">
           <div className="space-y-2 border-b border-[#3C4044]/10 pb-5">
             <div className="flex items-center justify-between gap-3 text-xs text-[#3C4044]/75">
-              <span>{product.brand} · Football Cleats</span>
+              <span>
+                {product.brand} · {sectionMeta.fullTitle}
+              </span>
               <span className={`font-medium ${totalStock > 0 ? 'text-[#3C4044]' : 'text-red-700'}`}>
-                {totalStock > 0 ? `${totalStock} total pairs in stock` : 'Currently out of stock'}
+                {totalStock > 0
+                  ? `${totalStock} total ${sectionMeta.unit} in stock`
+                  : 'Currently out of stock'}
               </span>
             </div>
 
@@ -202,11 +212,14 @@ export const ProductDetailsPage: React.FC = () => {
           {/* Size Selector with Per-Size Stock */}
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-[#1F2225]">Select Boot Size</span>
+              <span className="font-semibold text-[#1F2225]">{sectionMeta.sizeHeading}</span>
               {selectedSizeRow ? (
                 <span className="font-mono-num text-xs text-[#3C4044]">
-                  {selectedSizeRow.size_label} · {selectedSizeRow.stock_quantity} pair
-                  {selectedSizeRow.stock_quantity === 1 ? '' : 's'} left
+                  {selectedSizeRow.size_label} · {selectedSizeRow.stock_quantity}{' '}
+                  {selectedSizeRow.stock_quantity === 1
+                    ? sectionMeta.unitSingular
+                    : sectionMeta.unit}{' '}
+                  left
                 </span>
               ) : (
                 <span className="text-xs text-[#3C4044]/70">Required before adding to cart</span>
