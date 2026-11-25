@@ -348,7 +348,7 @@ export const CheckoutPage: React.FC = () => {
           <div className="divide-y divide-[#3C4044]/10">
             {items.map((item) => (
               <div key={`${item.product_id}-${item.size_label}`} className="py-3.5 flex gap-3.5 items-center">
-                <div className="w-16 h-14 rounded-md overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
+                <div className="w-16 h-16 aspect-square rounded-md overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
                   <ResilientImage src={item.image_url} alt={item.name} />
                 </div>
                 <div className="flex-1 min-w-0">

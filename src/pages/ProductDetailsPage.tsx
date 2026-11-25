@@ -126,7 +126,7 @@ export const ProductDetailsPage: React.FC = () => {
         {/* Left: Product Gallery */}
         <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-24">
           <div
-            className={`relative aspect-[4/3] bg-[#E8E7E5] border border-[#3C4044]/15 rounded-xl overflow-hidden group flex items-center justify-center ${
+            className={`relative aspect-square bg-[#E8E7E5] border border-[#3C4044]/15 rounded-xl overflow-hidden group flex items-center justify-center ${
               activeImage ? (isZooming ? 'cursor-crosshair' : 'cursor-zoom-in') : ''
             }`}
             onPointerEnter={(e) => {
@@ -234,7 +234,7 @@ export const ProductDetailsPage: React.FC = () => {
                   type="button"
                   onClick={() => setSelectedImage(imgUrl)}
                   aria-label={`View photo ${idx + 1} of ${gallery.length}`}
-                  className={`w-24 h-20 bg-[#E8E7E5] rounded-md overflow-hidden border-2 shrink-0 cursor-pointer transition-colors ${
+                  className={`w-20 h-20 aspect-square bg-[#E8E7E5] rounded-md overflow-hidden border-2 shrink-0 cursor-pointer transition-colors ${
                     activeImage === imgUrl ? 'border-[#FD7B41]' : 'border-[#3C4044]/15 hover:border-[#3C4044]/40'
                   }`}
                 >

@@ -53,16 +53,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({product}) => {
 
   return (
     <article className="bg-[#F7F6F5] border border-[#3C4044]/15 rounded-lg overflow-hidden flex flex-col transition-transform duration-150 hover:-translate-y-0.5">
-      {/* 4:3 Studio Footwear Image */}
+      {/* 1:1 Studio Product Image */}
       <Link
         to={`/product/${product.slug}`}
-        className="group block relative aspect-[4/3] bg-[#E8E7E5] overflow-hidden focus-visible:outline-2 focus-visible:outline-[#FD7B41]"
+        className="group block relative w-full aspect-square bg-[#E8E7E5] overflow-hidden focus-visible:outline-2 focus-visible:outline-[#FD7B41]"
       >
         <ResilientImage
           src={currentImage}
           alt={product.name}
           fallbackLabel={product.name}
-          className="w-full h-full object-contain"
+          className="w-full h-full aspect-square object-contain"
         />
         {hasDiscount && (
           <span className="absolute top-3 left-3 bg-[#FD7B41] text-[#1F2225] font-mono-num text-xs font-semibold px-2 py-1 rounded-sm">
@@ -119,7 +119,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({product}) => {
       </Link>
 
       {/* Card Body */}
-      <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+      <div className="p-5 flex-1 flex flex-col justify-between gap-4 border-t border-[#3C4044]/10">
         <div className="space-y-2">
           {/* Clean Unboxed Metadata */}
           <div className="flex items-center justify-between gap-2 text-xs text-[#3C4044]/70">

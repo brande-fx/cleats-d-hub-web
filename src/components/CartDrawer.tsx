@@ -109,7 +109,7 @@ export const CartDrawer: React.FC = () => {
                   <Link
                     to={`/product/${item.slug}`}
                     onClick={closeCart}
-                    className="w-24 h-20 rounded-md overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10"
+                    className="w-20 h-20 aspect-square rounded-md overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10"
                   >
                     <ResilientImage src={item.image_url} alt={item.name} />
                   </Link>

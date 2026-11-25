@@ -544,7 +544,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                           <tr key={product.id} className="hover:bg-[#DDDCDB]/25">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
-                                <div className="relative w-14 h-11 rounded-sm overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
+                                <div className="relative w-12 h-12 aspect-square rounded-sm overflow-hidden bg-[#E8E7E5] shrink-0 border border-[#3C4044]/10">
                                   <ResilientImage src={product.image_url} alt={product.name} />
                                   {(product.gallery_urls?.length || 0) > 1 && (
                                     <span className="absolute bottom-0.5 right-0.5 bg-[#1F2225]/85 text-[#F7F6F5] font-mono-num text-[10px] leading-none px-1 py-0.5 rounded-sm">
@@ -753,7 +753,7 @@ export const AdminProducts: React.FC<AdminProductsProps> = ({
                             isCover ? 'border-[#FD7B41] ring-1 ring-[#FD7B41]' : 'border-[#3C4044]/15'
                           }`}
                         >
-                          <div className="relative aspect-[4/3] bg-[#F7F6F5]">
+                          <div className="relative aspect-square bg-[#E8E7E5]">
                             <ResilientImage src={imgUrl} alt={`Product photo ${idx + 1}`} />
                             {isCover && (
                               <span className="absolute top-1.5 left-1.5 bg-[#FD7B41] text-[#1F2225] text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
