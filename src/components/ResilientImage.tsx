@@ -12,7 +12,7 @@ interface ResilientImageProps {
 export const ResilientImage: React.FC<ResilientImageProps> = ({
   src,
   alt,
-  className = 'w-full h-full object-cover',
+  className = 'w-full h-full object-contain',
   fallbackLabel,
   priority = false,
 }) => {

@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {ArrowLeft, Check, ChevronLeft, ChevronRight, Minus, Plus, ShieldCheck} from 'lucide-react';
+import {ArrowLeft, Check, ChevronLeft, ChevronRight, Minus, Plus, ShieldCheck, ZoomIn} from 'lucide-react';
 import {Link, useNavigate, useParams} from 'react-router-dom';
 import {ResilientImage} from '../components/ResilientImage';
 import {useCart} from '../hooks/useCart';
@@ -24,13 +24,22 @@ export const ProductDetailsPage: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
   const [feedback, setFeedback] = useState<{type: 'error' | 'success'; text: string} | null>(null);
+  const [isZooming, setIsZooming] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState<{x: number; y: number}>({x: 50, y: 50});
 
   useEffect(() => {
     setSelectedImage('');
     setSelectedSize('');
     setQuantity(1);
     setFeedback(null);
+    setIsZooming(false);
+    setZoomOrigin({x: 50, y: 50});
   }, [product?.id]);
+
+  useEffect(() => {
+    setIsZooming(false);
+    setZoomOrigin({x: 50, y: 50});
+  }, [selectedImage]);
 
   if (loading) {
     return (
@@ -116,36 +125,101 @@ export const ProductDetailsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         {/* Left: Product Gallery */}
         <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-24">
-          <div className="relative aspect-[4/3] bg-[#F7F6F5] border border-[#3C4044]/15 rounded-xl overflow-hidden group">
-            <ResilientImage
-              src={activeImage}
-              alt={`${product.name} — Photo ${activeIndex + 1}`}
-              fallbackLabel={product.name}
-              priority
-              className="w-full h-full object-cover"
-            />
+          <div
+            className={`relative aspect-[4/3] bg-[#E8E7E5] border border-[#3C4044]/15 rounded-xl overflow-hidden group flex items-center justify-center ${
+              activeImage ? (isZooming ? 'cursor-crosshair' : 'cursor-zoom-in') : ''
+            }`}
+            onPointerEnter={(e) => {
+              if (e.pointerType === 'mouse' && activeImage) {
+                setIsZooming(true);
+              }
+            }}
+            onPointerMove={(e) => {
+              if (e.pointerType !== 'mouse' || !activeImage) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              if (rect.width <= 0 || rect.height <= 0) return;
+              const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+              const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+              setZoomOrigin({x, y});
+              if (!isZooming) setIsZooming(true);
+            }}
+            onPointerLeave={() => setIsZooming(false)}
+            onClick={(e) => {
+              if (!activeImage) return;
+              // Allow tap-to-zoom toggle on touch screens (mouse uses hover)
+              if (window.matchMedia('(hover: none)').matches) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                  const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
+                  const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
+                  setZoomOrigin({x, y});
+                }
+                setIsZooming((prev) => !prev);
+              }
+            }}
+          >
+            <div
+              className="w-full h-full flex items-center justify-center transition-transform duration-150 ease-out will-change-transform pointer-events-none"
+              style={{
+                transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                transform: isZooming ? 'scale(2.2)' : 'scale(1)',
+              }}
+            >
+              <ResilientImage
+                src={activeImage}
+                alt={`${product.name} — Photo ${activeIndex + 1}`}
+                fallbackLabel={product.name}
+                priority
+                className="w-full h-full object-contain select-none"
+              />
+            </div>
+
+            {activeImage && (
+              <span
+                className={`hidden sm:inline-flex items-center gap-1.5 absolute bottom-3 left-3 bg-[#F7F6F5]/90 text-[#1F2225] border border-[#3C4044]/15 text-[11px] font-medium px-2.5 py-1 rounded-sm pointer-events-none transition-opacity duration-150 ${
+                  isZooming ? 'opacity-0' : 'opacity-90'
+                }`}
+              >
+                <ZoomIn className="w-3.5 h-3.5 text-[#3C4044]" />
+                <span>Hover to zoom</span>
+              </span>
+            )}
 
             {gallery.length > 1 && (
               <>
                 <button
                   type="button"
-                  onClick={() =>
-                    setSelectedImage(gallery[(activeIndex - 1 + gallery.length) % gallery.length])
-                  }
+                  onPointerEnter={(e) => {
+                    e.stopPropagation();
+                    setIsZooming(false);
+                  }}
+                  onPointerMove={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImage(gallery[(activeIndex - 1 + gallery.length) % gallery.length]);
+                  }}
                   aria-label="Previous photo"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#F7F6F5]/90 hover:bg-white text-[#1F2225] border border-[#3C4044]/15 inline-flex items-center justify-center shadow-sm cursor-pointer transition-opacity"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#F7F6F5]/90 hover:bg-white text-[#1F2225] border border-[#3C4044]/15 inline-flex items-center justify-center shadow-sm cursor-pointer transition-opacity z-10"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedImage(gallery[(activeIndex + 1) % gallery.length])}
+                  onPointerEnter={(e) => {
+                    e.stopPropagation();
+                    setIsZooming(false);
+                  }}
+                  onPointerMove={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImage(gallery[(activeIndex + 1) % gallery.length]);
+                  }}
                   aria-label="Next photo"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#F7F6F5]/90 hover:bg-white text-[#1F2225] border border-[#3C4044]/15 inline-flex items-center justify-center shadow-sm cursor-pointer transition-opacity"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#F7F6F5]/90 hover:bg-white text-[#1F2225] border border-[#3C4044]/15 inline-flex items-center justify-center shadow-sm cursor-pointer transition-opacity z-10"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
-                <span className="absolute bottom-3 right-3 bg-[#1F2225]/80 text-[#F7F6F5] font-mono-num text-xs font-medium px-2.5 py-1 rounded-sm">
+                <span className="absolute bottom-3 right-3 bg-[#1F2225]/80 text-[#F7F6F5] font-mono-num text-xs font-medium px-2.5 py-1 rounded-sm pointer-events-none">
                   {activeIndex + 1} / {gallery.length}
                 </span>
               </>
@@ -160,11 +234,15 @@ export const ProductDetailsPage: React.FC = () => {
                   type="button"
                   onClick={() => setSelectedImage(imgUrl)}
                   aria-label={`View photo ${idx + 1} of ${gallery.length}`}
-                  className={`w-24 h-20 rounded-md overflow-hidden border-2 shrink-0 cursor-pointer transition-colors ${
+                  className={`w-24 h-20 bg-[#E8E7E5] rounded-md overflow-hidden border-2 shrink-0 cursor-pointer transition-colors ${
                     activeImage === imgUrl ? 'border-[#FD7B41]' : 'border-[#3C4044]/15 hover:border-[#3C4044]/40'
                   }`}
                 >
-                  <ResilientImage src={imgUrl} alt={`${product.name} angle ${idx + 1}`} />
+                  <ResilientImage
+                    src={imgUrl}
+                    alt={`${product.name} angle ${idx + 1}`}
+                    className="w-full h-full object-contain"
+                  />
                 </button>
               ))}
             </div>

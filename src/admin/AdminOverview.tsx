@@ -699,7 +699,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 <ResilientImage
                   src={resolvePublicAssetUrl(heroUrlDraft || DEFAULT_STORE_SETTINGS.hero_image_url)}
                   alt="Hero banner preview"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
 

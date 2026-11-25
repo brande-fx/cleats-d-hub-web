@@ -135,12 +135,12 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="lg:col-span-7 relative min-h-[280px] sm:min-h-[360px] lg:min-h-[460px] bg-[#E8E7E5]">
+          <div className="lg:col-span-7 relative min-h-[280px] sm:min-h-[360px] lg:min-h-[460px] lg:max-h-[520px] bg-[#E8E7E5] flex items-center justify-center overflow-hidden">
             <ResilientImage
               src={resolvePublicAssetUrl(settings.hero_image_url || SEED_IMAGES.heroCampaign)}
               alt="Cleats D Hub flagship performance cleats"
               priority
-              className="w-full h-full lg:h-full object-cover"
+              className="w-full h-full max-h-[520px] object-contain"
             />
           </div>
         </div>

@@ -173,7 +173,7 @@ export const AdminSettings: React.FC = () => {
                 <ResilientImage
                   src={resolvePublicAssetUrl(form.hero_image_url || DEFAULT_STORE_SETTINGS.hero_image_url)}
                   alt="Homepage hero preview"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
 

@@ -62,7 +62,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({product}) => {
           src={currentImage}
           alt={product.name}
           fallbackLabel={product.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
         />
         {hasDiscount && (
           <span className="absolute top-3 left-3 bg-[#FD7B41] text-[#1F2225] font-mono-num text-xs font-semibold px-2 py-1 rounded-sm">
